@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.
 - 2026-11-10: Fix: picking a Chrome tab group (open or collapsed) did nothing; the window is now brought forward again after the panel closes.
 - 2026-11-10: `BeamDumpChromeTabStrip` defaults switch writes Chrome's tab strip and what Beam made of it to ~/Library/Logs/Beam (docs/testing.md).
 - 2026-11-10: Review fixes: a health notice now ranks after real matches (Return on "cla" opens Claude, not the report); the Slack "needs access" row can be hidden from results ("Don't show this in results again"; Settings still shows it); `@`/`#` are plain characters when Slack isn't loaded; Claude's store with only empty folders or `.DS_Store` is no longer "broken"; a Slack blob that fails to read mid-rewrite is retried, not cached as a miss; reordering kinds no longer reloads every provider; Chrome windows' tab strips are walked once per load, not twice; a stored Chrome "group" word no current header uses is forgotten (decision 0018).
