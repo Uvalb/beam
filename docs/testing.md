@@ -47,6 +47,8 @@ New pure logic should get a test. Keep OS calls out of the function you test (se
 - For the sandbox build, output from `NSLog` didn't show up reliably; writing debug lines to a file in the container worked.
 
 ## Verifying a release build
+The full release process (bump, build, feed, upload, deploy, update test) is in [releasing.md](releasing.md).
+
 One-time, in your own terminal (enter the credentials yourself): `xcrun notarytool store-credentials beam-notary --apple-id <apple id> --team-id P9GCM9K6AH`.
 Then `make release` (or `SKIP_NOTARIZE=1 make release` to check signing only). It ends with `stapler validate` and `spctl -a -vv` on the app and dmg. Then mount `build/Beam.dmg`, copy Beam.app to a temp folder, and launch it: Gatekeeper must not warn. Re-grant Accessibility, then check window search (including other Spaces), Chrome tabs and tab groups under the hardened runtime.
 
