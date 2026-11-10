@@ -19,10 +19,6 @@ Branch `claude/ranking-design-876499`.
 - Safari, Arc, Edge, Brave, Firefox for tabs and bookmarks. Chrome-only today is a provider detail, not a principle; the provider interface should allow more.
 - Open question: which expose tabs without Apple Events permission prompts or AX scraping.
 
-### System Settings panes
-- Results for panes ("Wi-Fi", "Displays", "Privacy & Security"), opened via `x-apple.systempreferences:` URLs.
-- Needs a static list per macOS version (pane IDs changed in 13). Check how fragile that is before committing.
-
 ## Built: the command-key actions
 Hold ⌘ for actions on the typed text: ⌘T Terminal and ⌘F Finder at a path, ⌘↵ new Chrome tab at a host. Done, with the open questions settled, in decision 0020 ; other terminals in 0021 (still to do: host Tab completion).
 
