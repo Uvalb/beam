@@ -55,6 +55,8 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     /// Quiet gray link in the bar once the pill is gone (hidden for supporters).
     private let barSupport = LinkButton()
     private let pillClose = NSButton()
+    /// Quiet hint left of the support link: what ⌘ would do for the typed text.
+    private let cmdHint = NSTextField(labelWithString: "")
     private var pillMilestone: Int?
     private let pillHeight: CGFloat = 32
     private let stampLabel = NSTextField(labelWithString: "")
@@ -154,6 +156,11 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         barSupport.target = self
         barSupport.action = #selector(supportClicked)
         barContent.addSubview(barSupport)
+        cmdHint.font = .systemFont(ofSize: 13, weight: .medium)
+        cmdHint.textColor = .tertiaryLabelColor
+        cmdHint.alignment = .right
+        cmdHint.isHidden = true
+        barContent.addSubview(cmdHint)
         panel.onCommandD = { [weak self] in self?.supportClicked() }
         panel.onCommandKey = { [weak self] in self?.commandKey($0) ?? false }
         panel.onCommandChanged = { [weak self] held in
@@ -337,7 +344,16 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         barSupport.isHidden = pillMilestone != nil || Support.isSupporter || isStamping
         barSupport.frame.origin = CGPoint(x: width - 22 - barSupport.frame.width,
                                           y: fieldY + (fieldHeight - barSupport.frame.height) / 2)
-        let fieldRight = barSupport.isHidden ? width - 18 : barSupport.frame.minX - 12
+        var fieldRight = barSupport.isHidden ? width - 18 : barSupport.frame.minX - 12
+        let hint = isStamping ? nil : CommandActions.hint(for: field.stringValue, held: cmdHeld)
+        cmdHint.isHidden = hint == nil
+        if let hint {
+            cmdHint.stringValue = hint
+            cmdHint.sizeToFit()
+            cmdHint.frame.origin = CGPoint(x: fieldRight - cmdHint.frame.width,
+                                           y: fieldY + (fieldHeight - cmdHint.frame.height) / 2)
+            fieldRight = cmdHint.frame.minX - 12
+        }
         field.frame = NSRect(x: 52, y: fieldY + (fieldHeight - 28) / 2, width: fieldRight - 52, height: 28)
         stampLabel.frame = NSRect(x: 56, y: fieldY + (fieldHeight - 26) / 2, width: width - 76, height: 26)
 
@@ -390,6 +406,11 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         switch sel {
         case #selector(NSResponder.moveDown(_:)): move(1); return true
         case #selector(NSResponder.moveUp(_:)): move(-1); return true
+        // ⌘ held turns the arrows into these (to the end/start of the text): keep them moving the selection.
+        case #selector(NSResponder.moveToEndOfDocument(_:)), #selector(NSResponder.moveToEndOfParagraph(_:)),
+             #selector(NSResponder.moveToEndOfLine(_:)) where cmdHeld && !results.isEmpty: move(1); return true
+        case #selector(NSResponder.moveToBeginningOfDocument(_:)), #selector(NSResponder.moveToBeginningOfParagraph(_:)),
+             #selector(NSResponder.moveToBeginningOfLine(_:)) where cmdHeld && !results.isEmpty: move(-1); return true
         case #selector(NSResponder.insertNewline(_:)): launch(table.selectedRow); return true
         case #selector(NSResponder.cancelOperation(_:)): hide(); return true
         case #selector(NSResponder.insertTab(_:)): return completePath()

@@ -152,6 +152,13 @@ enum CommandActions {
         return urlItems(query)
     }
 
+    /// The bar's hint: what ⌘ does for the typed text, nil when nothing applies. No filesystem access.
+    static func hint(for query: String, held: Bool) -> String? {
+        if PathInput.isPath(query) { return held ? "⌘T Terminal · ⌘F Finder" : "Hold ⌘ for Terminal, Finder" }
+        guard !URLInput.candidates(query, history: []).isEmpty else { return nil }
+        return held ? "⌘↵ New Chrome tab" : "Hold ⌘ to open as a site"
+    }
+
     static func openTerminal(at dir: URL) {
         NSWorkspace.shared.open([dir], withApplicationAt: terminalURL, configuration: NSWorkspace.OpenConfiguration())
     }
