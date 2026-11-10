@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: Release 0.1.3 (build 4), the first from the public repo.
 - 2026-11-10: GitHub Sponsor button (`.github/FUNDING.yml`) links to the website's support section, so supporters still get a license key.
 - 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.
 - 2026-11-10: Fix: picking a Chrome tab group (open or collapsed) did nothing; the window is now brought forward again after the panel closes.
