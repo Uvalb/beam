@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: Release 0.1.4 (build 5): command-key actions (⌘T terminal, ⌘F Finder, ⌘↵ Chrome tab), a terminal choice in Settings, and System Settings panes as results.
 - 2026-11-10: System Settings panes ("Wi-Fi", "Displays", "Privacy & Security"…) are results, listed at runtime from System Settings' extensions (0019).
 - 2026-11-10: ⌘T opens your chosen terminal (Terminal, iTerm2, Ghostty, Warp, Kitty, Alacritty or WezTerm), picked in Settings when more than one is installed (decision 0021). ⌘ held: arrows move the selection, and a hint in the bar says what ⌘ does.
 - 2026-11-10: Command-key actions: hold ⌘ in the panel for actions on the typed text; ⌘T opens Terminal and ⌘F Finder at a typed path (Tab completes folders), ⌘↵ opens a new Chrome tab at the typed host (`.com` default plus a small history of hosts you've opened) (decision 0020).
