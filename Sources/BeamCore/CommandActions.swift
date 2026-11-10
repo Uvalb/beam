@@ -117,9 +117,54 @@ enum URLInput {
     }
 }
 
+/// Terminals ⌘T can open (decision 0021). The first group takes a folder like a document;
+/// the second needs a new instance with a working-directory argument.
+enum TerminalApp: String, CaseIterable {
+    case terminal = "com.apple.Terminal", iterm = "com.googlecode.iterm2", ghostty = "com.mitchellh.ghostty",
+         warp = "dev.warp.Warp-Stable", kitty = "net.kovidgoyal.kitty", alacritty = "org.alacritty",
+         wezterm = "com.github.wez.wezterm"
+
+    static let key = "terminalApp"
+
+    var appURL: URL? { NSWorkspace.shared.urlForApplication(withBundleIdentifier: rawValue) }
+    var name: String { appURL.map { FileManager.default.displayName(atPath: $0.path).replacingOccurrences(of: ".app", with: "") } ?? "Terminal" }
+
+    static var installed: [TerminalApp] { allCases.filter { $0.appURL != nil } }
+
+    /// The user's choice if it's still installed, else Terminal.
+    static var current: TerminalApp {
+        get { UserDefaults.standard.string(forKey: key).flatMap(TerminalApp.init(rawValue:)).flatMap { $0.appURL != nil ? $0 : nil } ?? .terminal }
+        set {
+            if newValue == .terminal { UserDefaults.standard.removeObject(forKey: key) }
+            else { UserDefaults.standard.set(newValue.rawValue, forKey: key) }
+        }
+    }
+
+    /// Command-line arguments that open a window at `dir`; nil when the app takes the folder as a document.
+    func arguments(for dir: String) -> [String]? {
+        switch self {
+        case .terminal, .iterm, .ghostty, .warp: return nil
+        case .kitty: return ["--single-instance", "--directory", dir]
+        case .alacritty: return ["--working-directory", dir]
+        case .wezterm: return ["start", "--cwd", dir]
+        }
+    }
+
+    func open(at dir: URL) {
+        guard let app = appURL else { return }
+        let config = NSWorkspace.OpenConfiguration()
+        if let args = arguments(for: dir.path) {
+            config.arguments = args
+            config.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: app, configuration: config)
+        } else {
+            NSWorkspace.shared.open([dir], withApplicationAt: app, configuration: config)
+        }
+    }
+}
+
 enum CommandActions {
     static let chromeID = "com.google.Chrome"
-    static let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
     static let finderURL = URL(fileURLWithPath: "/System/Library/CoreServices/Finder.app")
 
     private static func appIcon(_ url: URL?) -> NSImage? {
@@ -128,8 +173,9 @@ enum CommandActions {
 
     static func terminalItem(_ query: String) -> SearchItem? {
         guard let dir = PathInput.directory(query) else { return nil }
-        return SearchItem(kind: .action, title: "Open Terminal here", subtitle: dir.path, keys: [], id: "action|terminal",
-                          trailing: "⌘T", icon: appIcon(terminalURL), activate: { openTerminal(at: dir) })
+        let term = TerminalApp.current
+        return SearchItem(kind: .action, title: "Open \(term.name) here", subtitle: dir.path, keys: [], id: "action|terminal",
+                          trailing: "⌘T", icon: appIcon(term.appURL), activate: { term.open(at: dir) })
     }
 
     static func finderItem(_ query: String) -> SearchItem? {
@@ -154,13 +200,10 @@ enum CommandActions {
 
     /// The bar's hint: what ⌘ does for the typed text, nil when nothing applies. No filesystem access.
     static func hint(for query: String, held: Bool) -> String? {
-        if PathInput.isPath(query) { return held ? "⌘T Terminal · ⌘F Finder" : "Hold ⌘ for Terminal, Finder" }
+        if PathInput.isPath(query) { let t = TerminalApp.current.name
+            return held ? "⌘T \(t) · ⌘F Finder" : "Hold ⌘ for \(t), Finder" }
         guard !URLInput.candidates(query, history: []).isEmpty else { return nil }
         return held ? "⌘↵ New Chrome tab" : "Hold ⌘ to open as a site"
-    }
-
-    static func openTerminal(at dir: URL) {
-        NSWorkspace.shared.open([dir], withApplicationAt: terminalURL, configuration: NSWorkspace.OpenConfiguration())
     }
 
     static func openFinder(at dir: URL) {

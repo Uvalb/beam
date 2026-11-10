@@ -66,6 +66,8 @@ struct SettingsView: View {
     @State private var order = KindOrder.current
     @State private var disabled = KindOrder.disabled
     @State private var maxResults = MaxResults.current
+    @State private var terminal = TerminalApp.current
+    private let terminals = TerminalApp.installed
 
     var body: some View {
         Form {
@@ -132,6 +134,16 @@ struct SettingsView: View {
                     Button("Acknowledgements…") { NSWorkspace.shared.open(notices) }
                         .buttonStyle(.link)
                         .font(.footnote)
+                }
+            }
+            if terminals.count > 1 {
+                Section {
+                    Picker("Open folders with ⌘T in", selection: $terminal) {
+                        ForEach(terminals, id: \.self) { Text($0.name).tag($0) }
+                    }
+                    .onChange(of: terminal) { TerminalApp.current = $0 }
+                } header: {
+                    Text("Terminal")
                 }
             }
             Section {

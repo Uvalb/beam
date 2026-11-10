@@ -66,3 +66,12 @@ struct URLInputTests {
         #expect(URLInput.url(for: "192.168.1.1")?.absoluteString == "http://192.168.1.1")
     }
 }
+
+struct TerminalAppTests {
+    @Test func arguments() {
+        #expect(TerminalApp.terminal.arguments(for: "/x") == nil)
+        #expect(TerminalApp.iterm.arguments(for: "/x") == nil)
+        #expect(TerminalApp.alacritty.arguments(for: "/x") == ["--working-directory", "/x"])
+        #expect(TerminalApp.wezterm.arguments(for: "/x") == ["start", "--cwd", "/x"])
+    }
+}

@@ -24,7 +24,7 @@ Branch `claude/ranking-design-876499`.
 - Needs a static list per macOS version (pane IDs changed in 13). Check how fragile that is before committing.
 
 ## Built: the command-key actions
-Hold ⌘ for actions on the typed text: ⌘T Terminal and ⌘F Finder at a path, ⌘↵ new Chrome tab at a host. Done, with the open questions settled, in decision 0020 (still to do: other terminals, host Tab completion).
+Hold ⌘ for actions on the typed text: ⌘T Terminal and ⌘F Finder at a path, ⌘↵ new Chrome tab at a host. Done, with the open questions settled, in decision 0020 ; other terminals in 0021 (still to do: host Tab completion).
 
 ## Not planned
 - MCP client, inbound push CLI or URL scheme: Beam stays a fast keyboard jump, not an integration hub.
