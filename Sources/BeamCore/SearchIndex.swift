@@ -2,11 +2,11 @@
 import AppKit
 
 enum ItemKind: Int, CaseIterable {
-    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
+    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6, bookmark = 7
 
     /// Result order among strong matches unless the user changed it in Settings (see 0016).
     /// Stored Claude sessions and Slack conversations aren't open, so they rank after apps.
-    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .claudeSession, .slack]
+    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .bookmark, .claudeSession, .slack]
 
     var badge: String {
         switch self {
@@ -17,6 +17,7 @@ enum ItemKind: Int, CaseIterable {
         case .claudeSession: return "Claude Session"
         case .slack: return "Slack"
         case .closedGroup: return "Closed Group"
+        case .bookmark: return "Bookmark"
         }
     }
 
@@ -29,6 +30,7 @@ enum ItemKind: Int, CaseIterable {
         case .closedGroup: return "Closed saved tab groups"
         case .claudeSession: return "Claude sessions"
         case .slack: return "Slack channels and DMs"
+        case .bookmark: return "Chrome bookmarks"
         }
     }
 }
@@ -129,6 +131,7 @@ final class SearchIndex {
     private(set) var tabGroups: [SearchItem] = []
     private(set) var sessions: [SearchItem] = []
     private(set) var slack: [SearchItem] = []
+    private(set) var bookmarks: [SearchItem] = []
     private let queue = DispatchQueue(label: "beam.index", qos: .userInitiated, attributes: .concurrent)
     var onUpdate: (() -> Void)?
 
@@ -154,6 +157,7 @@ final class SearchIndex {
         refresh("groups", groups || closed ? { ChromeGroupProvider.load(groups: groups, closed: closed) } : { [] }) { self.tabGroups = $0 }
         refresh("sessions", on(.claudeSession) ? ClaudeSessionProvider.load : { [] }) { self.sessions = $0 }
         refresh("slack", on(.slack) ? SlackProvider.load : { [] }) { self.slack = $0 }
+        refresh("bookmarks", on(.bookmark) ? BookmarkProvider.load : { [] }) { self.bookmarks = $0 }
     }
 
     func refreshApps() {
@@ -188,7 +192,7 @@ final class SearchIndex {
 
     func search(_ query: String, limit: Int = 9) -> [SearchItem] {
         let off = KindOrder.disabled
-        let all = apps + windows + tabs + tabGroups + sessions + slack
+        let all = apps + windows + tabs + tabGroups + sessions + slack + bookmarks
         return Self.search(off.isEmpty ? all : all.filter { !off.contains($0.kind) }, query: query, limit: limit, order: KindOrder.current)
     }
 
@@ -228,6 +232,8 @@ final class SearchIndex {
         for item in items {
             let primary = item.keys.compactMap { Matcher.score(q, in: $0) }.max().map { $0 + min(item.boost, Matcher.maxBoost) }
             let secondary = item.secondaryKeys.compactMap { Matcher.score(q, in: $0) }.max()
+            // Hundreds of bookmarks: only strong matches, never fuzzy noise (0019).
+            if item.kind == .bookmark, !(primary.map(Matcher.isStrong) ?? false) { continue }
             if let p = primary, Matcher.isStrong(p) {
                 // Secondary key also matching (e.g. the URL) is a small tiebreak within the tier.
                 let bonus = secondary.map { Matcher.isStrong($0) } == true ? 100 : 0
@@ -421,6 +427,32 @@ enum ChromeProvider {
         }
     }
 
+    /// Focuses an open tab whose URL is `url` (ignoring a trailing slash and fragment); false if none.
+    static func focusTab(withURL url: String) -> Bool {
+        func norm(_ u: String) -> String {
+            var u = u.components(separatedBy: "#")[0]
+            while u.hasSuffix("/") { u.removeLast() }
+            return u
+        }
+        let script = """
+        set out to ""
+        if application id "\(bundleID)" is running then
+            tell application id "\(bundleID)"
+                repeat with w in windows
+                    repeat with t in tabs of w
+                        set out to out & (id of t) & "\(sep)" & (title of t) & "\(sep)" & (URL of t) & "\(rowSep)"
+                    end repeat
+                end repeat
+            end tell
+        end if
+        return out
+        """
+        guard let out = AppleScript.run(script)?.stringValue,
+              let hit = parseRows(out).first(where: { norm($0.url) == norm(url) }) else { return false }
+        focus(tabID: hit.id, url: hit.url, title: hit.title)
+        return true
+    }
+
     /// `title` is Chrome's own (possibly empty: the item shows the URL then, but focus matches the real title).
     struct TabRow: Equatable { let id: Int, title: String, url: String }
 
@@ -455,7 +487,7 @@ enum ChromeProvider {
     /// it brings its old main window back on top, so the target flashes and disappears.
     /// Finds the tab by id; failing that (Chrome restarted, so ids changed) by URL and title.
     /// If the tab is gone, does nothing rather than open some other tab.
-    private static func focus(tabID: Int, url: String, title: String) {
+    static func focus(tabID: Int, url: String, title: String) {
         guard let chrome = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else { return }
         let script = """
         if application id "\(bundleID)" is running then

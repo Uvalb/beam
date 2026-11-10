@@ -10,10 +10,7 @@ Branch `claude/ranking-design-876499`.
 
 ## Planned
 ### Browser bookmarks
-- Match by name (and URL host), like Chrome tabs. Choosing one opens the URL, reusing an open tab with that URL if there is one.
-- Chrome first: read `~/Library/Application Support/Google/Chrome/<Profile>/Bookmarks` (JSON). No accessibility scraping, independent of the bookmarks bar. Probably all profiles, labelled with the profile name.
-- New `ItemKind.bookmark`, below apps by default, reorderable in Settings. Strong matches only, to avoid noise from hundreds of bookmarks.
-- Not available in the sandbox variant.
+- Done for Chrome (2026-11-10, decision 0019). Other browsers' bookmarks fall under the next item.
 
 ### Other browsers
 - Safari, Arc, Edge, Brave, Firefox for tabs and bookmarks. Chrome-only today is a provider detail, not a principle; the provider interface should allow more.
