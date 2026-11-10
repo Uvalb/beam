@@ -16,13 +16,22 @@ private final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     var onCommandD: (() -> Void)?
+    /// ⌘ plus a key (`t`, `f`, `\r`); returns whether it was handled.
+    var onCommandKey: ((String) -> Bool)?
+    var onCommandChanged: ((Bool) -> Void)?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-           event.charactersIgnoringModifiers == "d", let f = onCommandD {
-            f(); return true
+           let key = event.charactersIgnoringModifiers {
+            if key == "d", let f = onCommandD { f(); return true }
+            if ["t", "f", "\r"].contains(key), onCommandKey?(key) == true { return true }
         }
         return super.performKeyEquivalent(with: event)
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .flagsChanged { onCommandChanged?(event.modifierFlags.contains(.command)) }
+        super.sendEvent(event)
     }
 }
 
@@ -146,6 +155,12 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         barSupport.action = #selector(supportClicked)
         barContent.addSubview(barSupport)
         panel.onCommandD = { [weak self] in self?.supportClicked() }
+        panel.onCommandKey = { [weak self] in self?.commandKey($0) ?? false }
+        panel.onCommandChanged = { [weak self] held in
+            guard let self, held != self.cmdHeld else { return }
+            self.cmdHeld = held
+            self.updateResults()
+        }
 
         let col = NSTableColumn(identifier: .init("main"))
         table.addTableColumn(col)
@@ -207,6 +222,8 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         }
         index.refreshLive()
         field.stringValue = ""
+        cmdHeld = false
+        tabState = nil
         shownQuery = ""
         results = []
         table.reloadData()
@@ -342,18 +359,23 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
 
     // MARK: Search
 
-    func controlTextDidChange(_ obj: Notification) { updateResults() }
+    func controlTextDidChange(_ obj: Notification) { tabState = nil; updateResults() }
 
     /// The query `results` were built for, so a background refresh (same query) keeps the
     /// selected item instead of jumping back to the top row under the user's Return.
     private var shownQuery = ""
+    /// ⌘ is down: the list shows actions on the typed text instead of matches (0019).
+    private var cmdHeld = false
+    /// Tab completion in progress: the choices, and the one shown last (-1 = only the common prefix).
+    private var tabState: (choices: [String], index: Int)?
 
     private func updateResults() {
         guard panel.isVisible, !isStamping else { return }
         let query = field.stringValue
         let row = table.selectedRow
         let selected = query == shownQuery && results.indices.contains(row) ? results[row].identity : nil
-        results = index.search(query, limit: maxRows)
+        let actions = cmdHeld ? CommandActions.items(for: query) : []
+        results = actions.isEmpty ? index.search(query, limit: maxRows) : actions
         shownQuery = query
         table.reloadData()
         if !results.isEmpty {
@@ -370,8 +392,56 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         case #selector(NSResponder.moveUp(_:)): move(-1); return true
         case #selector(NSResponder.insertNewline(_:)): launch(table.selectedRow); return true
         case #selector(NSResponder.cancelOperation(_:)): hide(); return true
+        case #selector(NSResponder.insertTab(_:)): return completePath()
         default: return false
         }
+    }
+
+    /// Tab on a typed path: complete the folder name, shell style. One Tab fills the shared prefix (or
+    /// the only choice); more Tabs step through the choices. Not a path: Tab does nothing.
+    private func completePath() -> Bool {
+        let typed = field.stringValue
+        guard PathInput.isPath(typed) else { return true }
+        var state = tabState
+        if state == nil {
+            let choices = PathInput.completions(for: typed)
+            guard !choices.isEmpty else { NSSound.beep(); return true }
+            let common = PathInput.commonPrefix(choices)
+            state = (choices, common.count > typed.count ? -1 : 0)
+            if choices.count == 1 || state!.index == -1 { setField(choices.count == 1 ? choices[0] : common) }
+            else { setField(choices[0]) }
+        } else {
+            let next = (state!.index + 1) % state!.choices.count
+            state!.index = next
+            setField(state!.choices[next])
+        }
+        tabState = state
+        return true
+    }
+
+    private func setField(_ text: String) {
+        field.stringValue = text
+        field.currentEditor()?.selectedRange = NSRange(location: (text as NSString).length, length: 0)
+        updateResults()
+    }
+
+    /// ⌘T / ⌘F / ⌘↵. Runs the matching action on the typed text even if the list wasn't refreshed yet.
+    private func commandKey(_ key: String) -> Bool {
+        let query = field.stringValue
+        let item: SearchItem?
+        switch key {
+        case "t": item = CommandActions.terminalItem(query)
+        case "f": item = CommandActions.finderItem(query)
+        default:
+            // The selected host row if one is showing, else the best guess for the typed text.
+            let row = table.selectedRow
+            item = cmdHeld && results.indices.contains(row) && results[row].kind == .action && results[row].id?.hasPrefix("action|url") == true
+                ? results[row] : CommandActions.urlItems(query).first
+        }
+        guard let item else { NSSound.beep(); return true }
+        hide()
+        item.activate()
+        return true
     }
 
     private func move(_ delta: Int) {
@@ -472,6 +542,6 @@ private final class ResultCell: NSTableCellView {
         icon.image = item.icon
         title.stringValue = item.title
         subtitle.stringValue = item.subtitle
-        badge.stringValue = item.kind.badge
+        badge.stringValue = item.trailing ?? item.kind.badge
     }
 }

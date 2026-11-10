@@ -23,22 +23,8 @@ Branch `claude/ranking-design-876499`.
 - Results for panes ("Wi-Fi", "Displays", "Privacy & Security"), opened via `x-apple.systempreferences:` URLs.
 - Needs a static list per macOS version (pane IDs changed in 13). Check how fragile that is before committing.
 
-## Ideas: the command-key actions
-These add a second kind of result: not something that exists, but an action on what you typed. The shared design question is the trigger. Holding Cmd inside the input should show the action results in the list, so nothing is hidden behind an unseen shortcut.
-
-### URLs (Cmd+Enter)
-- Type `youtube`, press Cmd+Enter: open a new tab at youtube.com. Once Cmd is down, the matching results show in the list first.
-- Auto-complete the domain: `.com` by default, and other TLDs according to sites the user has beamed to before (a small local history of typed hosts, kept in UserDefaults).
-- Open question: history of typed hosts versus Chrome's own history. Reading Chrome's history file is richer but more invasive.
-
-### Terminal (Cmd+T)
-- Paste or type a path, press Cmd+T: open a new Terminal window there.
-- Treat input as a path when it starts with `/` or `~/`. Autocomplete either as you type for those inputs, or only after Tab turns it on. Prefer the Tab option first (no surprise latency, no filesystem reads on ordinary queries).
-- Open question: Terminal.app only, or the user's default terminal (iTerm, Ghostty)?
-
-### Folder (Cmd+F)
-- Same path detection and autocomplete as Terminal: opens a new Finder window at the folder.
-- Cmd+F, Cmd+T and Cmd+Enter must not clash with existing shortcuts (check the search bar's key handling and the system-shortcut parsing).
+## Built: the command-key actions
+Hold ⌘ for actions on the typed text: ⌘T Terminal and ⌘F Finder at a path, ⌘↵ new Chrome tab at a host. Done, with the open questions settled, in decision 0020 (still to do: other terminals, host Tab completion).
 
 ## Not planned
 - MCP client, inbound push CLI or URL scheme: Beam stays a fast keyboard jump, not an integration hub.
