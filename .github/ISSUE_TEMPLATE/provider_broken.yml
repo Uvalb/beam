@@ -1,0 +1,19 @@
+name: Claude or Slack results stopped working
+description: Usually sent from Beam's own "stopped working" report, after a Claude or Slack update
+labels: [provider-broken]
+body:
+  - type: markdown
+    attributes:
+      value: "Beam reads Claude's and Slack's own files, which can change in any update. The report below holds only versions and an error kind, nothing from your data. If you opened this by hand, type \"slack\" or \"claude\" in Beam and choose the \"stopped working\" row to fill it in."
+  - type: textarea
+    id: report
+    attributes:
+      label: Report from Beam
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else? (optional)
+      description: e.g. when it stopped, or whether you just updated the app.

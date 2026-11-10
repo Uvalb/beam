@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Beam</string>
+	<key>CFBundleExecutable</key>
+	<string>Beam</string>
+	<key>CFBundleIconFile</key>
+	<string>Beam</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+	<key>CFBundleIdentifier</key>
+	<string>com.beam.launcher</string>
+	<key>CFBundleName</key>
+	<string>Beam</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.2</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.beam.launcher</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>beam</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>3</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Beam reads and switches Google Chrome tabs.</string>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://beamlauncher.app/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>4wN2wpB/HJJ/gE1emf5KdX39uhCyX8rTSIiFQENH9ec=</string>
+</dict>
+</plist>

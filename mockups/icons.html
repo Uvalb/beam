@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Beam icon concepts</title>
+<style>
+:root{--bg:#ececf0;--fg:#1d1d1f;--muted:#6e6e73}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1c1f;--fg:#f2f2f5;--muted:#98989d}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px -apple-system,system-ui,sans-serif;padding:40px 16px}
+h1{font-weight:600;font-size:22px;text-align:center;margin:0 0 32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:36px;max-width:1100px;margin:0 auto}
+.card{text-align:center}
+.card svg{width:160px;height:160px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.28))}
+.small{display:flex;gap:10px;justify-content:center;align-items:end;margin-top:10px}
+.small svg{filter:none}
+h2{font-size:16px;margin:14px 0 4px}
+p{color:var(--muted);margin:0 auto;max-width:240px;line-height:1.4}
+</style></head><body>
+<h1>Beam icon concepts</h1>
+<div class="grid" id="g"></div>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <clipPath id="sq" clipPathUnits="objectBoundingBox"><path d="M.5 0C.86 0 .9.04 .95.1 1 .16 1 .3 1 .5S1 .84.95.9C.9.96.86 1 .5 1S.1.96.05.9C0 .84 0 .7 0 .5S0 .16.05.1C.1.04.14 0 .5 0Z"/></clipPath>
+</defs></svg>
+<script>
+const P=(x,y,s=8,c='#fff',o=1)=>`<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="${c}" opacity="${o}"/>`;
+// pixel magnifier from the app's beam-in bitmap
+const BMP=["............","..######....",".##....##...",".#......#...",".#......##..",".#......##..",".#......#...",".##....##...","..########..","....##..###.",".........###","..........##"];
+function pixGlass(ox,oy,s,c){let o='';BMP.forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch=='#')o+=P(ox+x*s,oy+y*s,s,c)}));return o}
+const concepts=[
+ {name:"Pixel Beam",desc:"The in-app animation frozen mid-flight: pixels streaking in from the left and resolving into the magnifier.",
+  svg:()=>{let s=`<defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b6cff"/><stop offset="1" stop-color="#2a2f8f"/></linearGradient></defs><rect width="200" height="200" fill="url(#a)"/>`;
+   // trails
+   [[30,70],[18,86],[40,102],[12,118],[34,134]].forEach(([x,y],i)=>{for(let k=0;k<4;k++)s+=P(x+k*12,y,8,'#9fb0ff',.25+k*.15)});
+   s+=pixGlass(72,52,8,'#fff');return s}},
+ {name:"Light Beam",desc:"A clean vector magnifier with a soft beam of light sweeping out from the lens. Most \"native macOS\".",
+  svg:()=>`<defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2a44"/><stop offset="1" stop-color="#0b0f1c"/></linearGradient>
+  <linearGradient id="bl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7fe3ff" stop-opacity="0"/><stop offset="1" stop-color="#7fe3ff" stop-opacity=".85"/></linearGradient></defs>
+  <rect width="200" height="200" fill="url(#b)"/><path d="M0 70 L88 88 L88 104 L0 140Z" fill="url(#bl)"/>
+  <circle cx="108" cy="96" r="34" fill="none" stroke="#fff" stroke-width="12"/><line x1="133" y1="121" x2="160" y2="148" stroke="#fff" stroke-width="15" stroke-linecap="round"/>`},
+ {name:"Teleport",desc:"An app-window glyph dissolving into pixels on the left and re-forming on the right — about jumping, not searching.",
+  svg:()=>{let s=`<defs><linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a59"/><stop offset="1" stop-color="#c2185b"/></linearGradient></defs><rect width="200" height="200" fill="url(#c)"/>`;
+   s+=`<rect x="98" y="62" width="70" height="76" rx="10" fill="#fff"/><rect x="98" y="62" width="70" height="16" rx="8" fill="#ffd6cc"/>`;
+   [[82,66],[82,90],[70,78],[82,114],[58,102],[70,126],[46,90],[34,114],[58,66]].forEach(([x,y],i)=>s+=P(x,y,10,'#fff',1-i*.09));return s}},
+ {name:"Beam Cursor",desc:"A bold text-input caret with a pixel trail — evokes \"just start typing\". Very readable at 16px.",
+  svg:()=>{let s=`<defs><linearGradient id="d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2bd4a4"/><stop offset="1" stop-color="#0a7a6a"/></linearGradient></defs><rect width="200" height="200" fill="url(#d)"/>`;
+   s+=`<rect x="120" y="48" width="16" height="104" rx="4" fill="#fff"/>`;
+   for(let i=0;i<5;i++)for(let j=0;j<5;j++){if(Math.abs(j-2)>i/1.5)continue;s+=P(104-i*16,92+(j-2)*10,8,'#fff',.85-i*.17)}return s}},
+ {name:"Spot B",desc:"A lowercase “b” whose bowl is the magnifier lens — a monogram with a search hint.",
+  svg:()=>`<defs><linearGradient id="e" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfbfd"/><stop offset="1" stop-color="#d9dce3"/></linearGradient></defs><rect width="200" height="200" fill="url(#e)"/>
+  <line x1="72" y1="44" x2="72" y2="128" stroke="#2a2f8f" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="100" cy="112" r="30" fill="none" stroke="#2a2f8f" stroke-width="16"/>
+  <line x1="122" y1="134" x2="150" y2="162" stroke="#5b6cff" stroke-width="16" stroke-linecap="round"/>`},
+];
+const wrap=(inner,w)=>`<svg viewBox="0 0 200 200" width="${w}" height="${w}"><g clip-path="url(#sq)">${inner}</g></svg>`;
+g.innerHTML=concepts.map((c,i)=>{const s=c.svg();return `<div class="card">${wrap(s,160)}
+ <div class="small">${wrap(s,64)}${wrap(s,32)}${wrap(s,16)}</div>
+ <h2>${i+1}. ${c.name}</h2><p>${c.desc}</p></div>`}).join('');
+</script></body></html>
