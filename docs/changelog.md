@@ -2,6 +2,9 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: ⌘T opens your chosen terminal (Terminal, iTerm2, Ghostty, Warp, Kitty, Alacritty or WezTerm), picked in Settings when more than one is installed (decision 0021). ⌘ held: arrows move the selection, and a hint in the bar says what ⌘ does.
+- 2026-11-10: Command-key actions: hold ⌘ in the panel for actions on the typed text; ⌘T opens Terminal and ⌘F Finder at a typed path (Tab completes folders), ⌘↵ opens a new Chrome tab at the typed host (`.com` default plus a small history of hosts you've opened) (decision 0020).
+- 2026-11-10: Release 0.1.3 (build 4), the first from the public repo.
 - 2026-11-10: GitHub Sponsor button (`.github/FUNDING.yml`) links to the website's support section, so supporters still get a license key.
 - 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.
 - 2026-11-10: Fix: picking a Chrome tab group (open or collapsed) did nothing; the window is now brought forward again after the panel closes.
