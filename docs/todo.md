@@ -18,7 +18,7 @@
 5. ~~Issue templates~~ (done). Labels and the pinned FAQ (#1) done 2026-11-10. Left: add saved replies (drafts in the private repo notes), and turn on private vulnerability reporting once public (GitHub doesn't offer it on private repos).
 6. ~~Turn off Discussions, Wiki and Projects~~ (done 2026-11-10).
 7. Trademark: a quick check (notes in the private business repo) found "Beam" alone unlikely to register (crowded, an existing Class 9 BEAM mark). Rely on the README name and icon notice and the "Beam Launcher" brand; get a proper USPTO check before paying for a filing.
-8. Check the Test workflow runs once public (GitHub Actions quota is used up until December; public repos' standard runners should be free, so verify the current terms).
+8. ~~Check the Test workflow runs once public~~ (done 2026-11-10: runs and passes on the public repo, no quota issue).
 9. Make the repo public on launch day, together with Show HN (launch plan is in the private business repo).
 
 ## Later or ideas
