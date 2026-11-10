@@ -65,7 +65,7 @@ struct RankingTests {
 
     @Test func kindOrderNormalize() {
         #expect(KindOrder.normalize([]) == ItemKind.defaultOrder)
-        #expect(KindOrder.normalize([0, 0, 99]) == [.app, .window, .tab, .tabGroup, .closedGroup, .claudeSession, .slack])
+        #expect(KindOrder.normalize([0, 0, 99]) == [.app, .window, .tab, .tabGroup, .closedGroup, .settingsPane, .claudeSession, .slack])
     }
 
     @Test func maxResultsClamp() {
