@@ -2,11 +2,11 @@
 import AppKit
 
 enum ItemKind: Int, CaseIterable {
-    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
+    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6, settingsPane = 7
 
     /// Result order among strong matches unless the user changed it in Settings (see 0016).
     /// Stored Claude sessions and Slack conversations aren't open, so they rank after apps.
-    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .claudeSession, .slack]
+    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .settingsPane, .claudeSession, .slack]
 
     var badge: String {
         switch self {
@@ -17,6 +17,7 @@ enum ItemKind: Int, CaseIterable {
         case .claudeSession: return "Claude Session"
         case .slack: return "Slack"
         case .closedGroup: return "Closed Group"
+        case .settingsPane: return "Settings"
         }
     }
 
@@ -29,6 +30,7 @@ enum ItemKind: Int, CaseIterable {
         case .closedGroup: return "Closed saved tab groups"
         case .claudeSession: return "Claude sessions"
         case .slack: return "Slack channels and DMs"
+        case .settingsPane: return "System Settings panes"
         }
     }
 }
@@ -129,6 +131,7 @@ final class SearchIndex {
     private(set) var tabGroups: [SearchItem] = []
     private(set) var sessions: [SearchItem] = []
     private(set) var slack: [SearchItem] = []
+    private(set) var panes: [SearchItem] = []
     private let queue = DispatchQueue(label: "beam.index", qos: .userInitiated, attributes: .concurrent)
     var onUpdate: (() -> Void)?
 
@@ -158,6 +161,7 @@ final class SearchIndex {
 
     func refreshApps() {
         refresh("apps", KindOrder.isEnabled(.app) ? AppProvider.load : { [] }) { self.apps = $0 }
+        refresh("panes", KindOrder.isEnabled(.settingsPane) ? SettingsPaneProvider.load : { [] }) { self.panes = $0 }
     }
 
     // Main thread only. At most one run per provider: a refresh asked for while one is in
@@ -188,7 +192,7 @@ final class SearchIndex {
 
     func search(_ query: String, limit: Int = 9) -> [SearchItem] {
         let off = KindOrder.disabled
-        let all = apps + windows + tabs + tabGroups + sessions + slack
+        let all = apps + panes + windows + tabs + tabGroups + sessions + slack
         return Self.search(off.isEmpty ? all : all.filter { !off.contains($0.kind) }, query: query, limit: limit, order: KindOrder.current)
     }
 

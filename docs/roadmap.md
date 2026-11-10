@@ -19,10 +19,6 @@ Branch `claude/ranking-design-876499`.
 - Safari, Arc, Edge, Brave, Firefox for tabs and bookmarks. Chrome-only today is a provider detail, not a principle; the provider interface should allow more.
 - Open question: which expose tabs without Apple Events permission prompts or AX scraping.
 
-### System Settings panes
-- Results for panes ("Wi-Fi", "Displays", "Privacy & Security"), opened via `x-apple.systempreferences:` URLs.
-- Needs a static list per macOS version (pane IDs changed in 13). Check how fragile that is before committing.
-
 ## Ideas: the command-key actions
 These add a second kind of result: not something that exists, but an action on what you typed. The shared design question is the trigger. Holding Cmd inside the input should show the action results in the list, so nothing is hidden behind an unseen shortcut.
 
