@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: GitHub Sponsor button (`.github/FUNDING.yml`) links to the website's support section, so supporters still get a license key.
 - 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.
 - 2026-11-10: Fix: picking a Chrome tab group (open or collapsed) did nothing; the window is now brought forward again after the panel closes.
 - 2026-11-10: `BeamDumpChromeTabStrip` defaults switch writes Chrome's tab strip and what Beam made of it to ~/Library/Logs/Beam (docs/testing.md).
