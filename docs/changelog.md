@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-10: Chrome bookmarks (all profiles) are results, below apps and only on strong matches of name or host; choosing one reuses an open tab with that URL, else opens it in its profile (decision 0019).
 - 2026-11-10: Release 0.1.3 (build 4), the first from the public repo.
 - 2026-11-10: GitHub Sponsor button (`.github/FUNDING.yml`) links to the website's support section, so supporters still get a license key.
 - 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.

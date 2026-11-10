@@ -1,6 +1,7 @@
 # Todo
 
 ## Next
+- Check by hand: Chrome bookmarks (0019): open a bookmark with the tab already open (reused) and closed (new tab in the right profile), with two profiles, and that the Settings list shows "Chrome bookmarks".
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.
