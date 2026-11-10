@@ -364,7 +364,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     /// The query `results` were built for, so a background refresh (same query) keeps the
     /// selected item instead of jumping back to the top row under the user's Return.
     private var shownQuery = ""
-    /// ⌘ is down: the list shows actions on the typed text instead of matches (0019).
+    /// ⌘ is down: the list shows actions on the typed text instead of matches (0020).
     private var cmdHeld = false
     /// Tab completion in progress: the choices, and the one shown last (-1 = only the common prefix).
     private var tabState: (choices: [String], index: Int)?

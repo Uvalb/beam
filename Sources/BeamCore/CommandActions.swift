@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import AppKit
 
-/// Actions on what you typed rather than things that exist (decision 0019): while ⌘ is held in the
+/// Actions on what you typed rather than things that exist (decision 0020): while ⌘ is held in the
 /// panel, the list shows what ⌘T (Terminal here), ⌘F (Finder here) and ⌘↵ (new Chrome tab) would do.
 /// Everything here is pure except `PathInput.completions`, `PathInput.directory`, `HostHistory`
 /// and the `run…` functions; none of it runs on an ordinary query, only while ⌘ is down or on Tab.

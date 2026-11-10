@@ -3,7 +3,7 @@ import AppKit
 
 enum ItemKind: Int, CaseIterable {
     case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
-    /// A command-key action on the typed text (0019); never ranked, never in Settings.
+    /// A command-key action on the typed text (0020); never ranked, never in Settings.
     case action = 7
 
     /// Result order among strong matches unless the user changed it in Settings (see 0016).
