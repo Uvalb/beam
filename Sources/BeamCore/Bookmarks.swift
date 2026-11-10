@@ -79,9 +79,14 @@ enum BookmarkProvider {
     static func open(url: String, profileDir: String) {
         DispatchQueue.global(qos: .userInteractive).async {
             if ChromeProvider.focusTab(withURL: url) { return }
+            // `open -a … --args` drops the arguments when Chrome already runs, so the URL lands in
+            // whichever profile was last active. Chrome's own binary hands the request to the running
+            // instance together with the profile.
+            guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID),
+                  let exe = Bundle(url: app)?.executableURL else { return }
             let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            p.arguments = ["-a", "Google Chrome", url, "--args", "--profile-directory=\(profileDir)"]
+            p.executableURL = exe
+            p.arguments = ["--profile-directory=\(profileDir)", url]
             try? p.run()
         }
     }
