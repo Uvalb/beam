@@ -14,6 +14,7 @@ Run `make test` (`swift test`) for the pure logic, then check by hand in the run
 - Chrome parsing: tab rows from the AppleScript output, `urlKey`, stripping " - Part of group …" from window titles, and tab-group header names.
 - `LicenseCheck.run` against a stubbed `URLProtocol` (no network): the request, a 404 that still parses, offline, and an unparseable body.
 - `SystemShortcut.binding(from:)`, and the panel's arrow-key wrap (`SearchPanel.wrap`).
+- `PathInput` / `URLInput`: path detection, pasted-path cleanup, folder completion on a temp directory, host candidates (`.com`, history first, rejects non-hosts) and schemes. By hand (the OS parts): hold ⌘ after typing `~/Doc` and `youtube`; ⌘T, ⌘F, ⌘↵; Tab on `~/Doc` completes, more Tabs cycle.
 - `Support`: milestones, the pill window, dismissing it and supporters. `Support.d` is pointed at a throwaway UserDefaults suite, so the suite runs serialized.
 
 CI (`.github/workflows/test.yml`) runs `swift build` and `swift test` on a macOS runner for PRs and pushes to main. It can't cover permissions, AppleScript to Chrome, the hotkey or the panel; those stay on the checklist below.

@@ -2,7 +2,10 @@
 import AppKit
 
 enum ItemKind: Int, CaseIterable {
-    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6, settingsPane = 7
+    case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
+    /// A command-key action on the typed text (0020); never ranked, never in Settings.
+    case action = 7
+    case settingsPane = 8
 
     /// Result order among strong matches unless the user changed it in Settings (see 0016).
     /// Stored Claude sessions and Slack conversations aren't open, so they rank after apps.
@@ -17,6 +20,7 @@ enum ItemKind: Int, CaseIterable {
         case .claudeSession: return "Claude Session"
         case .slack: return "Slack"
         case .closedGroup: return "Closed Group"
+        case .action: return "Action"
         case .settingsPane: return "Settings"
         }
     }
@@ -30,6 +34,7 @@ enum ItemKind: Int, CaseIterable {
         case .closedGroup: return "Closed saved tab groups"
         case .claudeSession: return "Claude sessions"
         case .slack: return "Slack channels and DMs"
+        case .action: return "Actions"
         case .settingsPane: return "System Settings panes"
         }
     }
@@ -116,6 +121,8 @@ struct SearchItem {
     var boost = 0
     /// The prefix that narrows the search to this item, if any.
     var scope: SearchScope?
+    /// Shown in the badge column instead of the kind's name (an action's key, such as ⌘T).
+    var trailing: String? = nil
     let icon: NSImage?
     let activate: () -> Void
 
