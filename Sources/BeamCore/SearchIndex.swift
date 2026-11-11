@@ -163,7 +163,24 @@ final class SearchIndex {
         let groups = on(.tabGroup), closed = on(.closedGroup)
         refresh("groups", groups || closed ? { ChromeGroupProvider.load(groups: groups, closed: closed) } : { [] }) { self.tabGroups = $0 }
         refresh("sessions", on(.claudeSession) ? ClaudeSessionProvider.load : { [] }) { self.sessions = $0 }
-        refresh("slack", on(.slack) ? SlackProvider.load : { [] }) { self.slack = $0 }
+        refreshSlack()
+    }
+
+    /// The App Store Slack's container is behind macOS's "access data from other apps" prompt,
+    /// which comes back after every Beam update (0022). So it's only read once "@" or "#" is typed;
+    /// until then the list comes from Beam's own copy of the last read.
+    private var slackLive = false
+
+    private func refreshSlack() {
+        let live = slackLive || !SlackProvider.needsConsent
+        refresh("slack", KindOrder.isEnabled(.slack) ? { SlackProvider.load(live: live) } : { [] }) { self.slack = $0 }
+    }
+
+    /// Main thread. The first scoped query since launch reads Slack for real (and may show the prompt).
+    func scopedQueryTyped() {
+        guard !slackLive, SlackProvider.needsConsent, KindOrder.isEnabled(.slack) else { return }
+        slackLive = true
+        refreshSlack()
     }
 
     func refreshApps() {

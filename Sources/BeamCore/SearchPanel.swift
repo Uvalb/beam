@@ -388,6 +388,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     private func updateResults() {
         guard panel.isVisible, !isStamping else { return }
         let query = field.stringValue
+        if SearchScope.parse(query).0 != nil { index.scopedQueryTyped() }
         let row = table.selectedRow
         let selected = query == shownQuery && results.indices.contains(row) ? results[row].identity : nil
         let actions = cmdHeld ? CommandActions.items(for: query) : []

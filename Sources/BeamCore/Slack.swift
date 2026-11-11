@@ -11,8 +11,8 @@ enum SlackProvider {
     static let bundleID = "com.tinyspeck.slackmacgap"
     private static var blobRoot: String { SlackPaths.root + "/IndexedDB/https_app.slack.com_0.indexeddb.blob" }
 
-    struct Entry: Equatable {
-        enum Kind: Equatable { case channel, person, groupDM }
+    struct Entry: Equatable, Codable {
+        enum Kind: Equatable, Codable { case channel, person, groupDM }
         let kind: Kind
         let title: String
         let subtitle: String
@@ -44,16 +44,47 @@ enum SlackProvider {
     /// Blobs that aren't Slack's state, so they aren't decoded again on every open.
     private static var misses: [String: (modified: Date, kind: ProviderHealth.Kind)] = [:]
 
-    static func load() -> [SearchItem] {
+    /// Reading Slack's data triggers macOS's "access data from other apps" prompt for the App Store build.
+    static var needsConsent: Bool { SlackPaths.root == SlackPaths.appStore }
+
+    /// `live: false` touches nothing of Slack's: it lists Beam's saved copy of the last read,
+    /// with Slack's icon instead of photos (those are in Slack's data too) and no health check.
+    static func load(live: Bool = true) -> [SearchItem] {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return [] }
         let icon = NSWorkspace.shared.icon(forFile: appURL.path)
+        guard live else { return items(SavedEntries.read() ?? [], icon: { _ in icon }) }
         let (current, health) = currentEntries()
         let notice = ProviderHealth.record(.slack, health, appURL: appURL)
-        return current.map { e in
+        if health.outcome == .ok, needsConsent { SavedEntries.write(current) }
+        return items(current, icon: { SlackAvatars.image(for: $0.imageURLs) ?? icon }) + (notice.map { [$0] } ?? [])
+    }
+
+    private static func items(_ entries: [Entry], icon: (Entry) -> NSImage) -> [SearchItem] {
+        entries.map { e in
             SearchItem(kind: .slack, title: e.title, subtitle: e.subtitle, keys: e.keys,
                        boost: boost(for: e), scope: e.kind == .channel ? .channels : .people,
-                       icon: SlackAvatars.image(for: e.imageURLs) ?? icon, activate: { URL(string: e.url).map { _ = NSWorkspace.shared.open($0) } })
-        } + (notice.map { [$0] } ?? [])
+                       icon: icon(e), activate: { URL(string: e.url).map { _ = NSWorkspace.shared.open($0) } })
+        }
+    }
+
+    /// Beam's own copy of the last good read, in Beam's Application Support folder.
+    enum SavedEntries {
+        private static let lock = NSLock()
+        static var path: String { NSHomeDirectory() + "/Library/Application Support/Beam/slack-entries.json" }
+        private static var lastWritten: [Entry]?
+
+        static func read() -> [Entry]? {
+            guard let data = FileManager.default.contents(atPath: path) else { return nil }
+            return try? JSONDecoder().decode([Entry].self, from: data)
+        }
+
+        static func write(_ entries: [Entry]) {
+            lock.lock(); defer { lock.unlock() }
+            guard entries != lastWritten, let data = try? JSONEncoder().encode(entries) else { return }
+            let url = URL(fileURLWithPath: path)
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if (try? data.write(to: url, options: .atomic)) != nil { lastWritten = entries }
+        }
     }
 
     /// The live entries plus how healthy the read was. Other IndexedDB blobs fail too, so only
