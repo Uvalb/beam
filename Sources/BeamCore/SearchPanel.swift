@@ -455,9 +455,10 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         case "t": item = CommandActions.terminalItem(query)
         case "f": item = CommandActions.finderItem(query)
         default:
-            // The selected host row if one is showing, else the best guess for the typed text.
+            // The selected action row if one is showing (a host, or Terminal/Finder on a path the
+            // arrows moved to), else the best guess for the typed text.
             let row = table.selectedRow
-            item = cmdHeld && results.indices.contains(row) && results[row].kind == .action && results[row].id?.hasPrefix("action|url") == true
+            item = cmdHeld && results.indices.contains(row) && results[row].kind == .action
                 ? results[row] : CommandActions.urlItems(query).first
         }
         guard let item else { NSSound.beep(); return true }

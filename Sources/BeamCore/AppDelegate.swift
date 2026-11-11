@@ -21,6 +21,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
         ? SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil) : nil
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        MainMenu.install()
         promptForAccessibility()
         LaunchAtLogin.applyDefaultIfInstalled()
         settings.onLicense = { [weak self] in self?.supportWindow.show() }
