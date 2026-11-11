@@ -146,6 +146,13 @@ struct SlackEntryTests {
         #expect(SearchIndex.rank(items, query: "tal").map(\.title) == ["Tal Yehoshafat", "Tal Laks"])
     }
 
+    @Test func savedEntriesRoundTrip() throws {
+        let e = SlackProvider.Entry(kind: .groupDM, title: "A, B", subtitle: "Group DM", keys: ["A, B"],
+                                    url: "slack://channel?team=T&id=G", recency: 0.5, isConversation: true, imageURLs: ["u"])
+        let data = try JSONEncoder().encode([e])
+        #expect(try JSONDecoder().decode([SlackProvider.Entry].self, from: data) == [e])
+    }
+
     @Test func boostNeverExceedsTheTierCap() {
         let hottest = SlackProvider.Entry(kind: .channel, title: "", subtitle: "", keys: [], url: "", recency: 1, isConversation: true)
         #expect(SlackProvider.boost(for: hottest) <= Matcher.maxBoost)
