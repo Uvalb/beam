@@ -2,6 +2,14 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-11: README: hero, before/after table and a link to beamlauncher.app, using the website's copy.
+- 2026-11-11: `docs/workflow.md` and decision 0023: PR flow, versioning, hand-installed release candidates (no Sparkle beta channel), patch releases, rollback and a pre-release checklist.
+- 2026-11-11: Beaming to a Chrome tab in another window no longer flashes it and raises a different window: the focus script read the tab title after moving the window, when `w` already pointed at another window. Tabs and tab groups now share one bring-forward step.
+- 2026-11-10: `docs/releasing.md`: the release process written down, with what went wrong cutting 0.1.4.
+- 2026-11-10: Release 0.1.4 (build 5): command-key actions (⌘T terminal, ⌘F Finder, ⌘↵ Chrome tab), a terminal choice in Settings, and System Settings panes as results.
+- 2026-11-10: System Settings panes ("Wi-Fi", "Displays", "Privacy & Security"…) are results, listed at runtime from System Settings' extensions (0019).
+- 2026-11-10: ⌘T opens your chosen terminal (Terminal, iTerm2, Ghostty, Warp, Kitty, Alacritty or WezTerm), picked in Settings when more than one is installed (decision 0021). ⌘ held: arrows move the selection, and a hint in the bar says what ⌘ does.
+- 2026-11-10: Command-key actions: hold ⌘ in the panel for actions on the typed text; ⌘T opens Terminal and ⌘F Finder at a typed path (Tab completes folders), ⌘↵ opens a new Chrome tab at the typed host (`.com` default plus a small history of hosts you've opened) (decision 0020).
 - 2026-11-10: Release 0.1.3 (build 4), the first from the public repo.
 - 2026-11-10: GitHub Sponsor button (`.github/FUNDING.yml`) links to the website's support section, so supporters still get a license key.
 - 2026-11-10: Published from a fresh `Uvalb/beam` with one squashed commit; the old repo is now private `Uvalb/beam-history`. GitHub settings, labels and a pinned FAQ (#1) set up.
@@ -59,3 +67,4 @@ Newest first. One line per merged change.
 - 2026-11-06: About is now Beam's own window sized to fit, instead of the standard panel (no scrollbar or white box).
 - 2026-11-10: Beam notices when Claude Code sessions or Slack stop working after an app update and offers a report (GitHub issue, email or copy) showing exactly what is sent: versions and an error kind, never your data (decision 0015).
 - 2026-11-10: Fresh clone built and ran on a second Mac with `make run`.
+- 2026-11-11: The App Store Slack's data is read only once you type "@" or "#", not at launch, so the "access data from other apps" prompt after each update shows up only when you search Slack; the last list is saved so results show right away (decision 0022).

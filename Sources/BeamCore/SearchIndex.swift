@@ -3,10 +3,13 @@ import AppKit
 
 enum ItemKind: Int, CaseIterable {
     case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
+    /// A command-key action on the typed text (0020); never ranked, never in Settings.
+    case action = 7
+    case settingsPane = 8
 
     /// Result order among strong matches unless the user changed it in Settings (see 0016).
     /// Stored Claude sessions and Slack conversations aren't open, so they rank after apps.
-    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .claudeSession, .slack]
+    static let defaultOrder: [ItemKind] = [.window, .tab, .tabGroup, .closedGroup, .app, .settingsPane, .claudeSession, .slack]
 
     var badge: String {
         switch self {
@@ -17,6 +20,8 @@ enum ItemKind: Int, CaseIterable {
         case .claudeSession: return "Claude Session"
         case .slack: return "Slack"
         case .closedGroup: return "Closed Group"
+        case .action: return "Action"
+        case .settingsPane: return "Settings"
         }
     }
 
@@ -29,6 +34,8 @@ enum ItemKind: Int, CaseIterable {
         case .closedGroup: return "Closed saved tab groups"
         case .claudeSession: return "Claude sessions"
         case .slack: return "Slack channels and DMs"
+        case .action: return "Actions"
+        case .settingsPane: return "System Settings panes"
         }
     }
 }
@@ -114,6 +121,8 @@ struct SearchItem {
     var boost = 0
     /// The prefix that narrows the search to this item, if any.
     var scope: SearchScope?
+    /// Shown in the badge column instead of the kind's name (an action's key, such as ⌘T).
+    var trailing: String? = nil
     let icon: NSImage?
     let activate: () -> Void
 
@@ -129,6 +138,7 @@ final class SearchIndex {
     private(set) var tabGroups: [SearchItem] = []
     private(set) var sessions: [SearchItem] = []
     private(set) var slack: [SearchItem] = []
+    private(set) var panes: [SearchItem] = []
     private let queue = DispatchQueue(label: "beam.index", qos: .userInitiated, attributes: .concurrent)
     var onUpdate: (() -> Void)?
 
@@ -153,11 +163,29 @@ final class SearchIndex {
         let groups = on(.tabGroup), closed = on(.closedGroup)
         refresh("groups", groups || closed ? { ChromeGroupProvider.load(groups: groups, closed: closed) } : { [] }) { self.tabGroups = $0 }
         refresh("sessions", on(.claudeSession) ? ClaudeSessionProvider.load : { [] }) { self.sessions = $0 }
-        refresh("slack", on(.slack) ? SlackProvider.load : { [] }) { self.slack = $0 }
+        refreshSlack()
+    }
+
+    /// The App Store Slack's container is behind macOS's "access data from other apps" prompt,
+    /// which comes back after every Beam update (0022). So it's only read once "@" or "#" is typed;
+    /// until then the list comes from Beam's own copy of the last read.
+    private var slackLive = false
+
+    private func refreshSlack() {
+        let live = slackLive || !SlackProvider.needsConsent
+        refresh("slack", KindOrder.isEnabled(.slack) ? { SlackProvider.load(live: live) } : { [] }) { self.slack = $0 }
+    }
+
+    /// Main thread. The first scoped query since launch reads Slack for real (and may show the prompt).
+    func scopedQueryTyped() {
+        guard !slackLive, SlackProvider.needsConsent, KindOrder.isEnabled(.slack) else { return }
+        slackLive = true
+        refreshSlack()
     }
 
     func refreshApps() {
         refresh("apps", KindOrder.isEnabled(.app) ? AppProvider.load : { [] }) { self.apps = $0 }
+        refresh("panes", KindOrder.isEnabled(.settingsPane) ? SettingsPaneProvider.load : { [] }) { self.panes = $0 }
     }
 
     // Main thread only. At most one run per provider: a refresh asked for while one is in
@@ -188,7 +216,7 @@ final class SearchIndex {
 
     func search(_ query: String, limit: Int = 9) -> [SearchItem] {
         let off = KindOrder.disabled
-        let all = apps + windows + tabs + tabGroups + sessions + slack
+        let all = apps + panes + windows + tabs + tabGroups + sessions + slack
         return Self.search(off.isEmpty ? all : all.filter { !off.contains($0.kind) }, query: query, limit: limit, order: KindOrder.current)
     }
 
@@ -484,8 +512,11 @@ enum ChromeProvider {
                         end if
                         if found is not 0 then
                             set active tab index of w to found
+                            -- Read the title before reordering: `w` is "window k", which is
+                            -- a different window once this one moves to the front.
+                            set t to title of active tab of w
                             set index of w to 1
-                            return "ok" & (title of active tab of w)
+                            return "ok" & t
                         end if
                     end repeat
                 end repeat
@@ -497,14 +528,24 @@ enum ChromeProvider {
             let result = AppleScript.run(script)?.stringValue ?? ""
             guard result.hasPrefix("ok") else { return }   // tab is gone
             let title = String(result.dropFirst(2))
-            if let win = axWindow(of: chrome, title: title) {
-                AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-                AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(win, kAXMainAttribute as CFString, kCFBooleanTrue)
-                // SkyLight switches to the window's Space; activate() alone stays on this one.
-                if SpaceWindows.focus(pid: chrome.processIdentifier, windowID: SpaceWindows.windowID(win)) { return }
+            guard let win = axWindow(of: chrome, title: title) else {
+                DispatchQueue.main.async { chrome.activate() }
+                return
             }
-            DispatchQueue.main.async { chrome.activate() }
+            bringForward(win, of: chrome)
+        }
+    }
+
+    /// Makes `window` Chrome's main window and brings it forward, in that order (see gotchas):
+    /// unminimize, raise, set AXMain, then switch to its Space (SkyLight) or else activate Chrome.
+    /// Shared by tabs and tab groups. Safe off the main thread.
+    static func bringForward(_ window: AXUIElement, of app: NSRunningApplication) {
+        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+        // SkyLight switches to the window's Space; activate() alone stays on this one.
+        if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) {
+            if Thread.isMainThread { app.activate() } else { DispatchQueue.main.async { app.activate() } }
         }
     }
 
@@ -850,10 +891,7 @@ enum ChromeGroupProvider {
     }
 
     private static func focus(window: AXUIElement, group: String, app: NSRunningApplication) {
-        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-        if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) { app.activate() }
+        ChromeProvider.bringForward(window, of: app)
         DispatchQueue.global(qos: .userInteractive).async {
             func find() -> (AXUIElement, [AXUIElement])? {
                 guard let g = groups(in: window).first(where: { $0.0 == group }) else { return nil }
@@ -862,13 +900,7 @@ enum ChromeGroupProvider {
             guard let (header, tabs) = find() else { return }
             // Bring the window forward again now that Beam's panel is gone, as the tab path does:
             // the raise above runs while the panel is still closing, and macOS can drop it.
-            func bringForward() {
-                AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-                if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) {
-                    DispatchQueue.main.async { app.activate() }
-                }
-            }
+            func bringForward() { ChromeProvider.bringForward(window, of: app) }
             if let first = tabs.first {
                 AXUIElementPerformAction(first, kAXPressAction as CFString)
                 bringForward()

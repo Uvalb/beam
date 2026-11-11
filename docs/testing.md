@@ -14,6 +14,7 @@ Run `make test` (`swift test`) for the pure logic, then check by hand in the run
 - Chrome parsing: tab rows from the AppleScript output, `urlKey`, stripping " - Part of group …" from window titles, and tab-group header names.
 - `LicenseCheck.run` against a stubbed `URLProtocol` (no network): the request, a 404 that still parses, offline, and an unparseable body.
 - `SystemShortcut.binding(from:)`, and the panel's arrow-key wrap (`SearchPanel.wrap`).
+- `PathInput` / `URLInput`: path detection, pasted-path cleanup, folder completion on a temp directory, host candidates (`.com`, history first, rejects non-hosts) and schemes. By hand (the OS parts): hold ⌘ after typing `~/Doc` and `youtube`; ⌘T, ⌘F, ⌘↵; Tab on `~/Doc` completes, more Tabs cycle.
 - `Support`: milestones, the pill window, dismissing it and supporters. `Support.d` is pointed at a throwaway UserDefaults suite, so the suite runs serialized.
 
 CI (`.github/workflows/test.yml`) runs `swift build` and `swift test` on a macOS runner for PRs and pushes to main. It can't cover permissions, AppleScript to Chrome, the hotkey or the panel; those stay on the checklist below.
@@ -46,6 +47,8 @@ New pure logic should get a test. Keep OS calls out of the function you test (se
 - For the sandbox build, output from `NSLog` didn't show up reliably; writing debug lines to a file in the container worked.
 
 ## Verifying a release build
+The full release process (bump, build, feed, upload, deploy, update test) is in [releasing.md](releasing.md).
+
 One-time, in your own terminal (enter the credentials yourself): `xcrun notarytool store-credentials beam-notary --apple-id <apple id> --team-id P9GCM9K6AH`.
 Then `make release` (or `SKIP_NOTARIZE=1 make release` to check signing only). It ends with `stapler validate` and `spctl -a -vv` on the app and dmg. Then mount `build/Beam.dmg`, copy Beam.app to a temp folder, and launch it: Gatekeeper must not warn. Re-grant Accessibility, then check window search (including other Spaces), Chrome tabs and tab groups under the hardened runtime.
 

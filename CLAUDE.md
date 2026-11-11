@@ -8,7 +8,9 @@ Hotkey launcher for macOS (Swift, AppKit, macOS 13+): type to jump to an app, wi
 - `docs/architecture.md`: every source file in a paragraph; read this instead of the codebase
 - `docs/decisions/`: why things are the way they are; don't reopen a decision without new information
 - `docs/todo.md`: what's next
-- `docs/testing.md`: how to verify a change (there are no automated tests)
+- `docs/testing.md`: how to verify a change
+- `docs/releasing.md`: how to cut a release; follow it step by step whenever a version is bumped, built or uploaded
+- `docs/workflow.md`: PR flow, versioning, release candidates, patches, rollback; read before opening a PR or cutting a release
 - `docs/gotchas.md`: traps that already cost time
 - `docs/decisions/` has gaps (0003–0005): those are business decisions kept in a separate private repo, along with the website (beamlauncher.app), marketing and metrics. If you have it locally it's at `../beam-private`.
 
