@@ -2,6 +2,8 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-11: ⌘↵ runs the selected action row, so with ⌘ held on a typed path, arrowing to "Open in Finder" and pressing ↵ works (it used to beep).
+- 2026-11-11: Cmd-X/C/V/A/Z work in every Beam text field, Cmd-W closes Settings/About/Support, and Emoji & Symbols is available, thanks to a hidden main menu.
 - 2026-11-11: README: hero, before/after table and a link to beamlauncher.app, using the website's copy.
 - 2026-11-11: `docs/workflow.md` and decision 0023: PR flow, versioning, hand-installed release candidates (no Sparkle beta channel), patch releases, rollback and a pre-release checklist.
 - 2026-11-11: Beaming to a Chrome tab in another window no longer flashes it and raises a different window: the focus script read the tab title after moving the window, when `w` already pointed at another window. Tabs and tab groups now share one bring-forward step.
