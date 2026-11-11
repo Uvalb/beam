@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-11: README: hero, before/after table and a link to beamlauncher.app, using the website's copy.
 - 2026-11-11: `docs/workflow.md` and decision 0023: PR flow, versioning, hand-installed release candidates (no Sparkle beta channel), patch releases, rollback and a pre-release checklist.
 - 2026-11-11: Beaming to a Chrome tab in another window no longer flashes it and raises a different window: the focus script read the tab title after moving the window, when `w` already pointed at another window. Tabs and tab groups now share one bring-forward step.
 - 2026-11-10: `docs/releasing.md`: the release process written down, with what went wrong cutting 0.1.4.
