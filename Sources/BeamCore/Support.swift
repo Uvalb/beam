@@ -30,7 +30,7 @@ enum Support {
     static var isSupporter: Bool { d.bool(forKey: Key.supporter) }
     static var license: LicenseInfo? { LicenseInfo(dictionary: d.dictionary(forKey: Key.license)) }
     /// Lemon Squeezy's customer portal: receipts, and managing a yearly plan.
-    static let ordersURL = URL(string: "https://app.lemonsqueezy.com/my-orders")!
+    static let ordersURL = URL(string: "https://link.com")! // Stripe Managed Payments: orders, receipts and cancelling live on Link
 
     /// Call once per successful beam. Returns the milestone if this beam reached one.
     @discardableResult
