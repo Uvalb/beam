@@ -1,12 +1,41 @@
-# Beam
+<p align="center">
+  <img src="Resources/beam-icon.png" alt="Beam icon" width="128" height="128">
+</p>
 
-A laser-focused Spotlight replacement: hit a shortcut, type, and jump to an **app**, **window**, **Chrome tab**,  or **Tab Group**
+<h1 align="center">Stop hunting for windows and tabs.</h1>
+
+<p align="center">
+  Beam to any window, tab, app, Claude session or Slack chat.<br>
+  Type a few letters and you're there.
+</p>
+
+<p align="center">
+  <a href="https://beamlauncher.app"><b>Download for Mac at beamlauncher.app</b></a><br>
+  <sub>Built to replace Spotlight on ⌘Space · Pay what you want · macOS 13 or later · Signed and notarized</sub>
+</p>
+
+<p align="center">
+  <a href="https://beamlauncher.app"><img src="https://beamlauncher.app/media/demo-v1-poster.jpg" alt="Beam: press the hotkey and type a few letters to jump to an open window, tab or tab group" width="720"></a>
+</p>
+
+## A few keystrokes, not five clicks
+
+| Without Beam | With Beam |
+| --- | --- |
+| Dock → Chrome → Window menu → scan 4 windows → find the Gmail tab among 60 (~12 s) | `⌘Space gma ↩` (~2 s) |
+| Mission Control → pick the right one of 3 VS Code windows (~8 s) | `⌘Space api ↩` (~2 s) |
+| Find the Slack window → sidebar → scroll → find the DM (~8 s) | `⌘Space @dana ↩` (~2 s) |
+| Find Claude → scroll the session list → open the session (~8 s) | `⌘Space refactor ↩` (~2 s) |
+
+Spotlight is a floodlight: files, web results, calculations, everything at once. Beam is a beam: one narrow job, done instantly. Get to the window, tab, app or session you meant, and nothing else.
+
+## What it finds
 
 - Floats over the screen the mouse is on; results update as you type.
 - Apps: everything in `/Applications`, `/System/Applications`, `~/Applications`, etc.
 - Windows: matches window title and app name (via the Accessibility API).
-- Chrome tabs: matches tab title (via AppleScript).
-- Claude Code sessions: matches session title and project folder (read from Claude desktop's session files).
+- Chrome tabs and tab groups: matches tab title (via AppleScript).
+- Claude sessions: matches session title and project folder (read from Claude desktop's session files).
 - Slack: channels you're in, people and group DMs with their photos (read from Slack desktop's local caches; messages are never used or shown).
 - Slack results show only behind Slack's own prefixes: `@` for people and group DMs, `#` for channels; `@` or `#` alone lists the ones you used most recently.
 - Ranking: exact → prefix → word-prefix → substring (or all words in any order: `mobile core` finds "core-mobile-team-devs") → fuzzy.
@@ -24,7 +53,11 @@ So if you suggest a feature and the answer is "no", please don't take it persona
 - To run the tests (`make test`): Xcode 16 or later, since they use the Swift Testing framework.
 - Swift packages, fetched automatically by SwiftPM on the first build (so the first build needs network access): [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) 2.0+ and [Sparkle](https://github.com/sparkle-project/Sparkle) 2.6+.
 
-## Build & run
+## Build from source
+
+Most people should grab the signed build from [beamlauncher.app](https://beamlauncher.app). To build it yourself:
+
+### Build & run
 
 ```bash
 make run
@@ -32,7 +65,7 @@ make run
 
 Builds `build/Beam.app` and launches it (no Dock icon).
 
-## Install
+### Install
 
 ```bash
 make install    # build, copy to /Applications/Beam.app, relaunch
