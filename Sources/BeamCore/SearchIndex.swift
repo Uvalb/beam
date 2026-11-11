@@ -495,8 +495,11 @@ enum ChromeProvider {
                         end if
                         if found is not 0 then
                             set active tab index of w to found
+                            -- Read the title before reordering: `w` is "window k", which is
+                            -- a different window once this one moves to the front.
+                            set t to title of active tab of w
                             set index of w to 1
-                            return "ok" & (title of active tab of w)
+                            return "ok" & t
                         end if
                     end repeat
                 end repeat
@@ -508,14 +511,24 @@ enum ChromeProvider {
             let result = AppleScript.run(script)?.stringValue ?? ""
             guard result.hasPrefix("ok") else { return }   // tab is gone
             let title = String(result.dropFirst(2))
-            if let win = axWindow(of: chrome, title: title) {
-                AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-                AXUIElementPerformAction(win, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(win, kAXMainAttribute as CFString, kCFBooleanTrue)
-                // SkyLight switches to the window's Space; activate() alone stays on this one.
-                if SpaceWindows.focus(pid: chrome.processIdentifier, windowID: SpaceWindows.windowID(win)) { return }
+            guard let win = axWindow(of: chrome, title: title) else {
+                DispatchQueue.main.async { chrome.activate() }
+                return
             }
-            DispatchQueue.main.async { chrome.activate() }
+            bringForward(win, of: chrome)
+        }
+    }
+
+    /// Makes `window` Chrome's main window and brings it forward, in that order (see gotchas):
+    /// unminimize, raise, set AXMain, then switch to its Space (SkyLight) or else activate Chrome.
+    /// Shared by tabs and tab groups. Safe off the main thread.
+    static func bringForward(_ window: AXUIElement, of app: NSRunningApplication) {
+        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+        // SkyLight switches to the window's Space; activate() alone stays on this one.
+        if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) {
+            if Thread.isMainThread { app.activate() } else { DispatchQueue.main.async { app.activate() } }
         }
     }
 
@@ -861,10 +874,7 @@ enum ChromeGroupProvider {
     }
 
     private static func focus(window: AXUIElement, group: String, app: NSRunningApplication) {
-        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-        if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) { app.activate() }
+        ChromeProvider.bringForward(window, of: app)
         DispatchQueue.global(qos: .userInteractive).async {
             func find() -> (AXUIElement, [AXUIElement])? {
                 guard let g = groups(in: window).first(where: { $0.0 == group }) else { return nil }
@@ -873,13 +883,7 @@ enum ChromeGroupProvider {
             guard let (header, tabs) = find() else { return }
             // Bring the window forward again now that Beam's panel is gone, as the tab path does:
             // the raise above runs while the panel is still closing, and macOS can drop it.
-            func bringForward() {
-                AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-                if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) {
-                    DispatchQueue.main.async { app.activate() }
-                }
-            }
+            func bringForward() { ChromeProvider.bringForward(window, of: app) }
             if let first = tabs.first {
                 AXUIElementPerformAction(first, kAXPressAction as CFString)
                 bringForward()
