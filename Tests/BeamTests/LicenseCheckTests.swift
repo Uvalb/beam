@@ -93,4 +93,31 @@ struct LicenseCheckTests {
         StubProtocol.handler = { _ in (502, Data("<html>bad gateway</html>".utf8)) }
         await #expect(throws: LicenseError.unexpected) { try await LicenseCheck.run(key: "x", session: session) }
     }
+
+    @Test func beamKeyGoesToBeamlauncher() async throws {
+        StubProtocol.handler = { req in
+            #expect(req.url == Licensing.beamValidateURL)
+            return (200, Data(#"{"valid":true,"test":false,"plan":"y24"}"#.utf8))
+        }
+        let (result, info) = try await LicenseCheck.run(key: " beam-m2uwl-zlkmz-4259z-abcde\n", session: session)
+        #expect(result == .valid)
+        #expect(info.keyEnding == "BCDE")
+        #expect(info.plan == "Supporter (yearly) – $24")
+        #expect(String(decoding: StubProtocol.lastBody ?? Data(), as: UTF8.self) == "key=BEAM-M2UWL-ZLKMZ-4259Z-ABCDE")
+    }
+
+    @Test func beamKeyInvalid() async throws {
+        StubProtocol.handler = { _ in (200, Data(#"{"valid":false}"#.utf8)) }
+        #expect(try await LicenseCheck.run(key: "BEAM-M2UWL-ZLKMZ-4259Z-ABCDE", session: session).0 == .invalid)
+    }
+}
+
+struct BeamKeyFormatTests {
+    @Test func format() {
+        #expect(Licensing.isBeamKey("BEAM-M2UWL-ZLKMZ-4259Z-ABCDE"))
+        #expect(!Licensing.isBeamKey("BEAM-M2UWL-ZLKMZ-4259Z-ABCD0")) // 0 isn't in the alphabet
+        #expect(!Licensing.isBeamKey("38B1460A-5104-4067-A91D-77B7D0255B49")) // a Lemon Squeezy key
+        #expect(Licensing.parseBeam(Data(#"{"valid":true,"test":true}"#.utf8), acceptTestKeys: false) == .testKey)
+        #expect(Licensing.parseBeam(Data("nope".utf8)) == nil)
+    }
 }
