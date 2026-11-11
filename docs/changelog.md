@@ -71,3 +71,4 @@ Newest first. One line per merged change.
 - 2026-11-10: Fresh clone built and ran on a second Mac with `make run`.
 - 2026-11-11: The App Store Slack's data is read only once you type "@" or "#", not at launch, so the "access data from other apps" prompt after each update shows up only when you search Slack; the last list is saved so results show right away (decision 0022).
 - 2026-11-11: Release 0.1.5 (build 6): Chrome tab focus raises the right window; Slack (App Store) data read only after @ or #; hidden main menu so Cmd-V etc. work, ⌘↵ runs the selected action row.
+- 2026-11-12: releasing.md: the feed is published by a beam-private PR (merge deploys), and tagging/GitHub release are step 7. Released 0.1.5 (build 6).

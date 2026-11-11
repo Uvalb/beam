@@ -25,14 +25,11 @@ npx wrangler r2 object put beam-downloads/Beam.dmg --file ~/code/beam/build/appc
 Check: `curl -sI https://downloads.beamlauncher.app/Beam-<ver>.dmg` gives 200 and the dmg's size. Never route update dmgs through `beamlauncher.app/download`, which counts downloads. Keep old versioned dmgs: they're how you get an official previous build to test the update.
 
 ## 5. Publish the feed
-Copy `build/appcast/appcast.xml` to `beam-private/website/public/appcast.xml` and commit ("appcast: x.y.z (build n)"). The deploy ships the whole local site, so first check `website/public` has nothing unreleased (compare with live; differences in email links are only Cloudflare's email obfuscation). The **user** runs the deploy, from the website folder (`wrangler.toml` is there; elsewhere it fails with "Must specify a directory"):
-```
-cd ~/code/beam-private/website && npx wrangler pages deploy
-```
-Check: `curl -s https://beamlauncher.app/appcast.xml | grep sparkle:version` shows the new build.
+Copy `build/appcast/appcast.xml` to `beam-private/website/public/appcast.xml` in a branch from `beam-private`'s `origin/main` ("appcast: x.y.z (build n)") and open a PR. The Pages project `beamlauncher` is connected to that repo, so merging to `main` deploys production (there is no `wrangler pages deploy` step anymore). The whole site ships, so first check `website/public` on `main` has nothing unreleased. The **user** merges.
+Check: `curl -s https://beamlauncher.app/appcast.xml | grep sparkle:version` shows the new build (a minute or two after the merge).
 
 ## 6. Test the update
 Needs an **official** build of the previous version: download `Beam-<previous>.dmg` from R2 and copy its Beam.app to /Applications (`codesign -dv` must show `TeamIdentifier=P9GCM9K6AH`). `make install` and `make run` builds are ad-hoc and have no updater (0010). Accessibility must be granted again after switching. The user clicks Check for Updates… and installs; then confirm `CFBundleVersion` in `/Applications/Beam.app`.
 
-## 7. Push
-Push both repos (with the user's OK) so nothing is left only on the local `main`.
+## 7. Tag and GitHub release
+`git tag -a v<ver>` on the merged bump commit, push it, and `gh release create v<ver> build/appcast/Beam-<ver>.dmg` with notes from the changelog (ask the user first: it's public).
