@@ -70,3 +70,4 @@ Newest first. One line per merged change.
 - 2026-11-10: Beam notices when Claude Code sessions or Slack stop working after an app update and offers a report (GitHub issue, email or copy) showing exactly what is sent: versions and an error kind, never your data (decision 0015).
 - 2026-11-10: Fresh clone built and ran on a second Mac with `make run`.
 - 2026-11-11: The App Store Slack's data is read only once you type "@" or "#", not at launch, so the "access data from other apps" prompt after each update shows up only when you search Slack; the last list is saved so results show right away (decision 0022).
+- 2026-11-11: Release 0.1.5 (build 6): Chrome tab focus raises the right window; Slack (App Store) data read only after @ or #; hidden main menu so Cmd-V etc. work, ⌘↵ runs the selected action row.
