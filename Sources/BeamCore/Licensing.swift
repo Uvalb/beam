@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import Foundation
 
-/// The one-time license key check. Picking an amount and paying happen on the website
+/// The license key check. Picking an amount and paying happen on the website
 /// (no in-app funnel to measure, no telemetry); this file only checks the emailed key.
 /// `Licensing.parse` is tested; `LicenseCheck.run` is one of Beam's two kinds of request (the other is Sparkle's update check).
 enum LicenseResult: Equatable {

@@ -19,7 +19,7 @@ final class SupportModel: ObservableObject {
                 let (result, info) = try await LicenseCheck.run(key: key)
                 switch result {
                 case .valid:
-                    Support.markSupporter(info)
+                    Support.markSupporter(info, key: key)
                     isSupporter = true
                     message = .thanks
                 case .invalid:
@@ -30,7 +30,7 @@ final class SupportModel: ObservableObject {
                     message = .error("That key belongs to a different product.")
                 }
             } catch LicenseError.offline {
-                message = .error("Couldn’t reach Lemon Squeezy. Check your connection and try again; Beam only needs to check once.")
+                message = .error("Couldn’t reach Lemon Squeezy. Check your connection and try again; Beam checks once now, then rarely.")
             } catch {
                 message = .error("Lemon Squeezy gave an unexpected answer. Please try again in a moment.")
             }
