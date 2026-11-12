@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-12: Accepts `BEAM-` supporter keys from beamlauncher.app (Stripe checkout), re-checked about monthly so a refund revokes them; Lemon Squeezy keys still work. "Receipts and billing" opens link.com (0024).
 - 2026-11-11: ⌘↵ runs the selected action row, so with ⌘ held on a typed path, arrowing to "Open in Finder" and pressing ↵ works (it used to beep).
 - 2026-11-11: Cmd-X/C/V/A/Z work in every Beam text field, Cmd-W closes Settings/About/Support, and Emoji & Symbols is available, thanks to a hidden main menu.
 - 2026-11-11: README: hero, before/after table and a link to beamlauncher.app, using the website's copy.

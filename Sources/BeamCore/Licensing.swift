@@ -90,7 +90,8 @@ struct LicenseInfo: Equatable {
 enum LicenseError: Error { case offline, unexpected }
 
 enum LicenseCheck {
-    /// Asks Lemon Squeezy once whether the key is valid. Needs no secret. We use
+    /// Checks a key once: BEAM- keys with beamlauncher.app, older keys with Lemon Squeezy.
+    /// For Lemon Squeezy keys: Needs no secret. We use
     /// `validate` (not `activate`) because it changes nothing server-side. The key is never logged.
     static func run(key: String, session: URLSession = .shared) async throws -> (LicenseResult, LicenseInfo) {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)

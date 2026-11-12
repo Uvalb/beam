@@ -30,9 +30,9 @@ final class SupportModel: ObservableObject {
                     message = .error("That key belongs to a different product.")
                 }
             } catch LicenseError.offline {
-                message = .error("Couldn’t reach Lemon Squeezy. Check your connection and try again; Beam checks once now, then rarely.")
+                message = .error("Couldn’t reach the license server. Check your connection and try again; Beam checks once now, then rarely.")
             } catch {
-                message = .error("Lemon Squeezy gave an unexpected answer. Please try again in a moment.")
+                message = .error("The license server gave an unexpected answer. Please try again in a moment.")
             }
         }
     }
