@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-12: License window wording: the key comes from the checkout thank-you page (Stripe receipts can't carry it), the field shows the `BEAM-` format, and the footer says the key is re-checked monthly with beamlauncher.app instead of "Lemon Squeezy once".
 - 2026-11-12: Release 0.1.6 (build 7): accepts BEAM- supporter keys from beamlauncher.app (Stripe checkout), re-checked monthly; receipts link to link.com.
 - 2026-11-12: Accepts `BEAM-` supporter keys from beamlauncher.app (Stripe checkout), re-checked about monthly so a refund revokes them; Lemon Squeezy keys still work. "Receipts and billing" opens link.com (0024).
 - 2026-11-11: ⌘↵ runs the selected action row, so with ⌘ held on a typed path, arrowing to "Open in Finder" and pressing ↵ works (it used to beep).
