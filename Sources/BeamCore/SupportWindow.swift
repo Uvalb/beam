@@ -23,7 +23,7 @@ final class SupportModel: ObservableObject {
                     isSupporter = true
                     message = .thanks
                 case .invalid:
-                    message = .error("That key wasn’t recognised. Check that you copied all of it from your receipt email, or write to support@beamlauncher.app and we’ll sort it out.")
+                    message = .error("That key wasn’t recognised. Check that you copied all of it, or write to support@beamlauncher.app and we’ll sort it out.")
                 case .testKey:
                     message = .error("That’s a test-mode key, which can’t unlock a real supporter badge.")
                 case .wrongProduct:
@@ -47,14 +47,14 @@ struct SupportView: View {
                 Section {
                 Text(model.isSupporter
                      ? "You’re a Beam supporter. Thank you ♥ The reminders are off for good."
-                     : "Paste the license key from your receipt email to turn off the support reminders. Thank you for keeping Beam alive ♥")
+                     : "Paste the supporter key from the thank-you page after checkout to turn off the support reminders. Thank you for keeping Beam alive ♥")
                     .fixedSize(horizontal: false, vertical: true)
             }
             }
             if !model.isSupporter {
                 Section {
                     HStack {
-                        TextField("License key from your receipt email", text: $model.licenseKey)
+                        TextField("BEAM-XXXXX-XXXXX-XXXXX-XXXXX", text: $model.licenseKey)
                             .onSubmit { model.activate() }
                         Button("Activate") { model.activate() }
                             .disabled(model.licenseKey.trimmingCharacters(in: .whitespaces).isEmpty || model.message == .checking)
@@ -65,7 +65,7 @@ struct SupportView: View {
                     default: EmptyView()
                     }
                 } footer: {
-                    Text("Beam contacts Lemon Squeezy once to check your key, and never again. The only other request is the optional update check, which sends no system profile.")
+                    Text("Beam checks your key with beamlauncher.app now and about once a month after, so a refund ends the badge. The only other request is the optional update check, which sends no system profile.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
