@@ -31,6 +31,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
 
         KeyboardShortcuts.onKeyDown(for: .toggleBeam) { [weak self] in self?.panel.toggle() }
         setupStatusItem()
+        Task { await Support.recheckIfDue() }
 
         // First launch: show Settings so the user can pick a shortcut (or take over ⌘Space).
         if !UserDefaults.standard.bool(forKey: "didShowSettingsOnce") {

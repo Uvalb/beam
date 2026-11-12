@@ -4,7 +4,7 @@
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.
-- Website (private repo): honour `?from=app` (don't start a download), and point the Lemon Squeezy confirmation button / thank-you page at `beam://license` so supporters land back in the app.
+- Website (private repo): honour `?from=app` (don't start a download), and point the checkout thank-you page at `beam://license` so supporters land back in the app.
 - Sparkle (website, private repo): host `appcast.xml` at `https://beamlauncher.app/appcast.xml` and versioned dmgs (`Beam-<version>.dmg`) at `DOWNLOAD_PREFIX` (default `https://downloads.beamlauncher.app/`, R2; not `/download/`, which counts downloads). Bump `CFBundleVersion` in `Resources/Info.plist` for every release (Sparkle compares it). Back up the EdDSA private key (`generate_keys -x file`); losing it means users can't be updated.
 - ~~Final update check against the real HTTPS feed~~ (done 2026-11-06): official 0.1.0 → 0.1.1 → 0.1.2 updated through `beamlauncher.app/appcast.xml`, installed and relaunched.
 

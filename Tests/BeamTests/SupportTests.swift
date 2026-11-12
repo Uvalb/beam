@@ -56,4 +56,38 @@ struct SupportTests {
         #expect(Support.recordBeam() == nil)
         #expect(Support.pillMilestone == nil)
     }
+
+    private let key = "BEAM-ABCDE-FGHJK-LMNPQ-RSTUV"
+    private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func recheckDueAfterThirtyDays() {
+        Support.markSupporter(key: key, now: t0)
+        #expect(Support.keyDueForRecheck(now: t0.addingTimeInterval(29 * 86_400)) == nil)
+        #expect(Support.keyDueForRecheck(now: t0.addingTimeInterval(30 * 86_400)) == key)
+    }
+
+    @Test func lemonSqueezyKeysAreNotRechecked() {
+        Support.markSupporter(key: "38b1460a-5104-4067-a91d-77b872934d51", now: t0)
+        #expect(Support.keyDueForRecheck(now: t0.addingTimeInterval(400 * 86_400)) == nil)
+    }
+
+    @Test func invalidRecheckRevokes() {
+        Support.markSupporter(key: key, now: t0)
+        Support.applyRecheck(.invalid)
+        #expect(!Support.isSupporter)
+        #expect(Support.keyDueForRecheck(now: t0.addingTimeInterval(400 * 86_400)) == nil)
+    }
+
+    @Test func offlineRecheckKeepsSupporter() {
+        Support.markSupporter(key: key, now: t0)
+        Support.applyRecheck(nil)
+        #expect(Support.isSupporter)
+    }
+
+    @Test func validRecheckResetsClock() {
+        Support.markSupporter(key: key, now: t0)
+        let later = t0.addingTimeInterval(31 * 86_400)
+        Support.applyRecheck(.valid, now: later)
+        #expect(Support.keyDueForRecheck(now: later.addingTimeInterval(86_400)) == nil)
+    }
 }
