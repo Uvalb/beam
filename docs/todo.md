@@ -22,7 +22,7 @@
 9. Make the repo public on launch day, together with Show HN (launch plan is in the private business repo).
 
 ## Later or ideas
-- Check in the real app: closed saved groups (needs bookmarks bar shown) reopen and focus, and the Settings drag list reorders results.
+- Check in the real app: closed saved groups (needs bookmarks bar shown) reopen and focus, and the Settings drag list reorders results (now on the Results tab; also check ⌥↑/↓, right-click Move Up/Down, and that the window resizes between tabs).
 - Try the command-key actions by hand (⌘T, ⌘F, ⌘↵, Tab completion, ⌘ held list; 0020): the implementer could not drive the UI. Also check the terminal picker opens iTerm/Ghostty/etc. at the folder (only iTerm was installed when built; Kitty/Alacritty/WezTerm args untested). Possible follow-up: Tab completion for hosts.
 - Product direction (bookmarks, other browsers, System Settings panes, Cmd+Enter URLs, Cmd+T / Cmd+F for paths) lives in `roadmap.md`.
 - Non-English follow-ups, ranked, from the 2026-11-09 review: typing with a non-Latin keyboard layout (Hebrew, Russian) can't find English names; Beam's own UI isn't localizable yet; "Part of group" stripping in `WindowProvider` is English-only (affects other Chromium browsers); English-only hint keywords.
