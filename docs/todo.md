@@ -1,6 +1,7 @@
 # Todo
 
 ## Next
+- Chrome tab focus: watch the `chrome-focus` log for a few days after the window-id change (2026-11-14). Still open: one jump took 3 s because the window wasn't matched by title on this Space and fell through to the full element scan; a one-off AppleScript -600 with Chrome running, and whether the post-focus check ever shows Chrome key but not on top.
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.

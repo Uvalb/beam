@@ -244,6 +244,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let x = vf.midX - width / 2
         let top = vf.maxY - vf.height * 0.22
         panel.setFrameTopLeftPoint(NSPoint(x: x, y: top))
+        if let front = NSWorkspace.shared.frontmostApplication, front != .current { ChromeProvider.appBeforePanel = front }
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(field)
@@ -412,7 +413,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
              #selector(NSResponder.moveToEndOfLine(_:)) where cmdHeld && !results.isEmpty: move(1); return true
         case #selector(NSResponder.moveToBeginningOfDocument(_:)), #selector(NSResponder.moveToBeginningOfParagraph(_:)),
              #selector(NSResponder.moveToBeginningOfLine(_:)) where cmdHeld && !results.isEmpty: move(-1); return true
-        case #selector(NSResponder.insertNewline(_:)): launch(table.selectedRow); return true
+        case #selector(NSResponder.insertNewline(_:)): launch(table.selectedRow, via: "return"); return true
         case #selector(NSResponder.cancelOperation(_:)): hide(); return true
         case #selector(NSResponder.insertTab(_:)): return completePath()
         default: return false
@@ -479,11 +480,15 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         ((max(row, 0) + delta) % count + count) % count
     }
 
-    @objc private func clicked() { launch(table.clickedRow) }
+    @objc private func clicked() { launch(table.clickedRow, via: "click") }
 
-    private func launch(_ row: Int) {
+    private func launch(_ row: Int, via trigger: String) {
         guard results.indices.contains(row) else { return }
         let item = results[row]
+        // What started it, to trace focus attempts nobody meant to make (no query text logged).
+        let ev = NSApp.currentEvent
+        let key = ev.map { $0.type == .keyDown ? " key \($0.keyCode)" : " event \($0.type.rawValue)" } ?? ""
+        ChromeProvider.focusLog.debug("launch via \(trigger, privacy: .public)\(key, privacy: .public), \(String(describing: item.kind), privacy: .public) row \(row), panel visible \(self.panel.isVisible)")
         if let milestone = Support.recordBeam() {
             stamp(milestone, then: item)
         } else {
