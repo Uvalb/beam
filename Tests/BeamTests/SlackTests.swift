@@ -204,3 +204,56 @@ struct SlackAvatarTests {
         #expect(SlackAvatars.body(ofEntry: Array(entry(key: key, body: [1]).prefix(10)), key: key) == nil)
     }
 }
+
+struct SlackWorkspaceTests {
+    private func entry(_ title: String, kind: SlackProvider.Entry.Kind = .channel, subtitle: String = "") -> SlackProvider.Entry {
+        .init(kind: kind, title: title, subtitle: subtitle, keys: [title], url: "slack://channel?id=" + title)
+    }
+
+    @Test func mergeListsEveryWorkspace() {
+        let merged = SlackProvider.merge(newestFirst: [
+            .init(teamID: "T1", name: "Acme", entries: [entry("#acme")]),
+            .init(teamID: "T2", name: "Side", entries: [entry("#side-project")]),
+        ])
+        #expect(merged.map(\.title) == ["#acme", "#side-project"])
+    }
+
+    @Test func mergeKeepsOnlyTheNewestBlobOfAWorkspace() {
+        let merged = SlackProvider.merge(newestFirst: [
+            .init(teamID: "T1", name: "Acme", entries: [entry("#renamed")]),
+            .init(teamID: "T2", name: "Side", entries: [entry("#side-project")]),
+            .init(teamID: "T1", name: "Acme", entries: [entry("#old-name")]),
+        ])
+        #expect(merged.map(\.title) == ["#renamed", "#side-project"])
+    }
+
+    @Test func severalWorkspacesNamePeopleAndGroupDMs() {
+        let dana = entry("Dana Levi", kind: .person, subtitle: "Engineer")
+        let merged = SlackProvider.merge(newestFirst: [
+            .init(teamID: "T1", name: "Acme", entries: [dana, entry("Noa Cohen", kind: .person, subtitle: "Acme"),
+                                                         entry("Dana, Noa", kind: .groupDM, subtitle: "Group DM")]),
+            .init(teamID: "T2", name: "Side", entries: [dana, entry("#general", subtitle: "Side")]),
+        ])
+        #expect(merged.map(\.subtitle) == ["Engineer · Acme", "Acme", "Group DM · Acme", "Engineer · Side", "Side"])
+    }
+
+    @Test func oneWorkspaceLeavesSubtitlesAlone() {
+        let merged = SlackProvider.merge(newestFirst: [
+            .init(teamID: "T1", name: "Acme", entries: [entry("Dana Levi", kind: .person, subtitle: "Engineer"),
+                                                         entry("Dana, Noa", kind: .groupDM, subtitle: "Group DM")]),
+        ])
+        #expect(merged.map(\.subtitle) == ["Engineer", "Group DM"])
+    }
+
+    @Test func workspaceCarriesTheStatesOwnTeam() {
+        let channel = JSValue.object(["is_channel": .bool(true), "is_member": .bool(true), "name": .string("general")])
+        let workspace = SlackProvider.workspace(from: state(channels: ["C1": channel], members: [:]))
+        #expect(workspace?.teamID == "T1")
+        #expect(workspace?.name == "Acme")
+        #expect(workspace?.entries.map(\.title) == ["#general"])
+    }
+
+    @Test func workspaceIsNilForAnotherIndexedDBValue() {
+        #expect(SlackProvider.workspace(from: .object(["unrelated": .bool(true)])) == nil)
+    }
+}
