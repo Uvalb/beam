@@ -4,8 +4,8 @@ import CryptoKit
 
 // MARK: - Slack channels, people and group DMs
 
-/// Slack desktop persists its client state (channels, members, ...) as one large IndexedDB value,
-/// which Chromium stores as a standalone blob file. Reading that file directly avoids parsing LevelDB.
+/// Slack desktop persists each signed-in workspace's client state (channels, members, ...) as one
+/// large IndexedDB value, which Chromium stores as a standalone blob file. Reading that file directly avoids parsing LevelDB.
 /// Messages are decoded with the rest but never used or shown.
 enum SlackProvider {
     static let bundleID = "com.tinyspeck.slackmacgap"
@@ -15,7 +15,7 @@ enum SlackProvider {
         enum Kind: Equatable, Codable { case channel, person, groupDM }
         let kind: Kind
         let title: String
-        let subtitle: String
+        var subtitle: String
         let keys: [String]
         let url: String
         /// 0...1, from Slack's own conversation priority or how recent the last message is.
@@ -39,8 +39,14 @@ enum SlackProvider {
         return conversationBoost + Int(e.recency * Double(Matcher.maxBoost - conversationBoost))
     }
 
-    /// Decoding takes a few hundred ms, and the panel refreshes on every open; reuse it until the blob changes.
-    private static var cache: (path: String, modified: Date, entries: [Entry])?
+    struct Workspace: Equatable {
+        let teamID: String
+        let name: String
+        let entries: [Entry]
+    }
+
+    /// Decoding takes a few hundred ms, and the panel refreshes on every open; reuse each blob until it changes.
+    private static var cache: [String: (modified: Date, workspace: Workspace)] = [:]
     /// Blobs that aren't Slack's state, so they aren't decoded again on every open.
     private static var misses: [String: (modified: Date, kind: ProviderHealth.Kind)] = [:]
 
@@ -53,9 +59,9 @@ enum SlackProvider {
         guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return [] }
         let icon = NSWorkspace.shared.icon(forFile: appURL.path)
         guard live else { return items(SavedEntries.read() ?? [], icon: { _ in icon }) }
-        let (current, health) = currentEntries()
+        let (current, health, isComplete) = currentEntries()
         let notice = ProviderHealth.record(.slack, health, appURL: appURL)
-        if health.outcome == .ok, needsConsent { SavedEntries.write(current) }
+        if health.outcome == .ok, isComplete, needsConsent { SavedEntries.write(current) }
         return items(current, icon: { SlackAvatars.image(for: $0.imageURLs) ?? icon }) + (notice.map { [$0] } ?? [])
     }
 
@@ -89,34 +95,69 @@ enum SlackProvider {
 
     /// The live entries plus how healthy the read was. Other IndexedDB blobs fail too, so only
     /// "blobs there, none of them Slack's state" counts as broken (decision 0015).
-    private static func currentEntries() -> ([Entry], ProviderHealth.Observation) {
-        if isAccessDenied(blobRoot) { return ([], .init(outcome: .noAccess)) }
+    /// `isComplete` is false when a blob couldn't be read this time, so a workspace may be missing.
+    private static func currentEntries() -> ([Entry], ProviderHealth.Observation, isComplete: Bool) {
+        if isAccessDenied(blobRoot) { return ([], .init(outcome: .noAccess), true) }
         let blobs = blobsNewestFirst()
         var failures: [ProviderHealth.Kind] = []
+        var decoded: [String: (modified: Date, workspace: Workspace)] = [:]
+        var workspaces: [Workspace] = []
+        var didDecodeNewBlob = false
+        var didSkipUnreadableBlob = false
         for (path, modified) in blobs {
-            if let cache, cache.path == path, cache.modified == modified {
-                return (cache.entries, .init(outcome: .ok, filesSeen: blobs.count, parsed: 1))
+            if let hit = cache[path], hit.modified == modified {
+                decoded[path] = hit; workspaces.append(hit.workspace); continue
             }
             if let miss = misses[path], miss.modified == modified { failures.append(miss.kind); continue }
             let bytes: [UInt8]
             do { bytes = [UInt8](try Data(contentsOf: URL(fileURLWithPath: path))) } catch {
                 // macOS may allow listing the container but refuse the read.
-                if isPermissionError(error as NSError) { return ([], .init(outcome: .noAccess)) }
+                if isPermissionError(error as NSError) { return ([], .init(outcome: .noAccess), true) }
                 // Likely mid-rewrite by Chromium: not cached as a miss, not counted as a failure.
+                didSkipUnreadableBlob = true
                 continue
             }
             guard let state = try? SlackCache.decode(bytes) else {
                 let kind = SlackCache.failureKind(bytes)
                 misses[path] = (modified, kind); failures.append(kind); continue
             }
-            guard let entries = entries(from: state) else {
+            guard let workspace = workspace(from: state) else {
                 misses[path] = (modified, .missingKey); failures.append(.missingKey); continue
             }
-            cache = (path, modified, entries)
-            SlackAvatars.forgetMisses()
-            return (entries, .init(outcome: .ok, filesSeen: blobs.count, parsed: 1))
+            decoded[path] = (modified, workspace); workspaces.append(workspace); didDecodeNewBlob = true
         }
-        return ([], health(failures: failures))
+        cache = decoded
+        if didDecodeNewBlob { SlackAvatars.forgetMisses() }
+        let isComplete = !didSkipUnreadableBlob
+        guard !workspaces.isEmpty else { return ([], health(failures: failures), isComplete) }
+        let teamCount = Set(workspaces.map(\.teamID)).count
+        return (merge(newestFirst: workspaces), .init(outcome: .ok, filesSeen: blobs.count, parsed: teamCount), isComplete)
+    }
+
+    /// Slack keeps one blob per signed-in workspace, and Chromium may leave an older blob of the
+    /// same workspace behind until it compacts: the newest per workspace is its live state.
+    static func merge(newestFirst workspaces: [Workspace]) -> [Entry] {
+        var seenTeams = Set<String>()
+        let live = workspaces.filter { seenTeams.insert($0.teamID).inserted }
+        let hasSeveralWorkspaces = live.count > 1
+        guard hasSeveralWorkspaces else { return live.flatMap(\.entries) }
+        return live.flatMap { w in w.entries.map { naming(w.name, on: $0) } }
+    }
+
+    /// Channels and title-less people already show their workspace; the same person in two
+    /// workspaces would otherwise be two identical rows.
+    private static func naming(_ workspace: String, on entry: Entry) -> Entry {
+        let namesWorkspace = entry.kind == .channel || entry.subtitle == workspace
+        guard !namesWorkspace else { return entry }
+        var named = entry
+        named.subtitle = "\(entry.subtitle) · \(workspace)"
+        return named
+    }
+
+    /// Nil when the value isn't Slack's client state (another IndexedDB blob).
+    static func workspace(from state: JSValue, now: Date = Date()) -> Workspace? {
+        guard let teamID = state["selfTeamIds"]["teamId"].string, let entries = entries(from: state, now: now) else { return nil }
+        return Workspace(teamID: teamID, name: workspaceName(state, teamID: teamID), entries: entries)
     }
 
     /// The furthest any blob got: a blob that decodes but lacks Slack's keys says more than one that
@@ -141,7 +182,6 @@ enum SlackProvider {
         return (e.userInfo[NSUnderlyingErrorKey] as? NSError).map(isPermissionError) ?? false
     }
 
-    /// Chromium may leave an older blob behind until it compacts; the newest one is the live state.
     private static func blobsNewestFirst() -> [(String, Date)] {
         guard let files = FileManager.default.enumerator(atPath: blobRoot) else { return [] }
         var result: [(String, Date)] = []
@@ -155,12 +195,15 @@ enum SlackProvider {
         return result.sorted { $0.1 > $1.1 }
     }
 
-    /// Nil when the value isn't Slack's client state (another IndexedDB blob).
+    private static func workspaceName(_ state: JSValue, teamID: String) -> String {
+        state["teams"][teamID]["name"].string ?? "Slack"
+    }
+
     static func entries(from state: JSValue, now: Date = Date()) -> [Entry]? {
         guard let channels = state["channels"].object, let members = state["members"].object,
               let teamID = state["selfTeamIds"]["teamId"].string else { return nil }
         let selfID = state["bootData"]["user_id"].string
-        let workspace = state["teams"][teamID]["name"].string ?? "Slack"
+        let workspace = workspaceName(state, teamID: teamID)
 
         func realName(_ m: JSValue) -> String? {
             [m["profile"]["real_name"].string, m["real_name"].string, m["name"].string]

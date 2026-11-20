@@ -2,6 +2,8 @@
 
 ## Next
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
+- Slack: sign out of one of two workspaces by hand and check whether its blob stays and Beam still lists it (0025).
+- Slack: test `SlackProvider.currentEntries()` against a temp folder of encoded blobs (cache reuse, newest per workspace, dropping deleted files); needs a test helper that writes Slack-shaped blobs.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.
 - Website (private repo): honour `?from=app` (don't start a download), and point the checkout thank-you page at `beam://license` so supporters land back in the app.
