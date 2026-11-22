@@ -392,7 +392,13 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let row = table.selectedRow
         let selected = query == shownQuery && results.indices.contains(row) ? results[row].identity : nil
         let actions = cmdHeld ? CommandActions.items(for: query) : []
-        results = actions.isEmpty ? index.search(query, limit: maxRows) : actions
+        if actions.isEmpty {
+            // Remembered URLs completing the text go under the matches, so typing stays a search first.
+            let urls = CommandActions.suggestionItems(query)
+            results = Array(index.search(query, limit: maxRows).prefix(maxRows - urls.count)) + urls
+        } else {
+            results = actions
+        }
         shownQuery = query
         table.reloadData()
         if !results.isEmpty {
@@ -414,19 +420,20 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
              #selector(NSResponder.moveToBeginningOfLine(_:)) where cmdHeld && !results.isEmpty: move(-1); return true
         case #selector(NSResponder.insertNewline(_:)): launch(table.selectedRow); return true
         case #selector(NSResponder.cancelOperation(_:)): hide(); return true
-        case #selector(NSResponder.insertTab(_:)): return completePath()
+        case #selector(NSResponder.insertTab(_:)): return complete()
         default: return false
         }
     }
 
-    /// Tab on a typed path: complete the folder name, shell style. One Tab fills the shared prefix (or
-    /// the only choice); more Tabs step through the choices. Not a path: Tab does nothing.
-    private func completePath() -> Bool {
+    /// Tab completes, shell style: a typed path to its folders, anything else to the URLs opened
+    /// before with ⌘↵. One Tab fills the shared prefix (or the only choice); more Tabs step through
+    /// the choices. Nothing to complete: a beep.
+    private func complete() -> Bool {
         let typed = field.stringValue
-        guard PathInput.isPath(typed) else { return true }
         var state = tabState
         if state == nil {
-            let choices = PathInput.completions(for: typed)
+            let choices = PathInput.isPath(typed) ? PathInput.completions(for: typed)
+                : URLInput.historyMatches(typed, history: HostHistory.hosts)
             guard !choices.isEmpty else { NSSound.beep(); return true }
             let common = PathInput.commonPrefix(choices)
             state = (choices, common.count > typed.count ? -1 : 0)

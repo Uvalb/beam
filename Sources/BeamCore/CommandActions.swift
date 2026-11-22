@@ -66,7 +66,7 @@ enum PathInput {
     }
 }
 
-/// Hosts the user has opened with ⌘↵, newest first, in UserDefaults. Chrome's own history is not read.
+/// Hosts and URLs the user has opened with ⌘↵, newest first, in UserDefaults. Chrome's own history is not read.
 enum HostHistory {
     static let key = "typedHosts"
     static let limit = 50
@@ -82,19 +82,36 @@ enum HostHistory {
 }
 
 enum URLInput {
-    /// What to open for a typed token, best first: remembered hosts that start with it, then the
+    /// The typed token as a URL to open: trimmed, a leading `http(s)://` and trailing `/` dropped,
+    /// the host lowercased (the path keeps its case).
+    static func normalize(_ query: String) -> String {
+        var q = query.trimmingCharacters(in: .whitespaces)
+        for scheme in ["https://", "http://"] where q.lowercased().hasPrefix(scheme) { q = String(q.dropFirst(scheme.count)) }
+        while q.count > 1, q.hasSuffix("/") { q.removeLast() }
+        guard let slash = q.firstIndex(of: "/") else { return q.lowercased() }
+        return q[..<slash].lowercased() + q[slash...]
+    }
+
+    /// Previously opened URLs (hosts or full URLs with paths) that complete the typed token, newest
+    /// first, excluding an exact match. `www.` is ignored on both sides.
+    static func historyMatches(_ query: String, history: [String]) -> [String] {
+        let q = normalize(query)
+        guard !q.isEmpty, !PathInput.isPath(q), isHostLike(q.lowercased()) else { return [] }
+        let bare = { (s: String) in s.hasPrefix("www.") ? String(s.dropFirst(4)) : s }
+        return history.filter { $0 != q && (bare($0).hasPrefix(bare(q)) || $0.hasPrefix(q)) }
+    }
+
+    /// What to open for a typed token, best first: remembered URLs that start with it, then the
     /// token itself with `.com` added unless it already has a TLD, a port, or is localhost/an IP.
     /// A token that can't be a host (spaces, other characters, a path) gives none.
     static func candidates(_ query: String, history: [String]) -> [String] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty, !PathInput.isPath(q), isHostLike(q) else { return [] }
-        var out: [String] = []
-        if !q.contains("/") && !q.contains(":") {
-            out += history.filter { $0.hasPrefix(q) && !$0.contains("/") }
-        }
+        let q = normalize(query)
+        guard !q.isEmpty, !PathInput.isPath(q), isHostLike(q.lowercased()) else { return [] }
+        var out = history.contains(q) ? [q] : []
+        out += historyMatches(q, history: history)
         let literal = hasTLD(q) ? q : q + ".com"
         if !out.contains(literal) { out.append(literal) }
-        return Array(out.prefix(4))
+        return Array(out.prefix(5))
     }
 
     static func isHostLike(_ q: String) -> Bool {
@@ -185,11 +202,20 @@ enum CommandActions {
     }
 
     static func urlItems(_ query: String) -> [SearchItem] {
+        URLInput.candidates(query, history: HostHistory.hosts).map(urlItem)
+    }
+
+    /// Rows for remembered URLs that complete the typed text, shown under the ordinary matches
+    /// as you type (no ⌘ needed). Empty for a short query so one letter doesn't fill the list.
+    static func suggestionItems(_ query: String, limit: Int = 3) -> [SearchItem] {
+        guard URLInput.normalize(query).count >= 2 else { return [] }
+        return URLInput.historyMatches(query, history: HostHistory.hosts).prefix(limit).map(urlItem)
+    }
+
+    private static func urlItem(_ host: String) -> SearchItem {
         let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: chromeID)
-        return URLInput.candidates(query, history: HostHistory.hosts).map { host in
-            SearchItem(kind: .action, title: "Open \(host)", subtitle: "New tab in Chrome", keys: [], id: "action|url|\(host)",
-                       trailing: "⌘↵", icon: appIcon(chrome), activate: { openURL(host) })
-        }
+        return SearchItem(kind: .action, title: "Open \(host)", subtitle: "New tab in Chrome", keys: [], id: "action|url|\(host)",
+                          trailing: "⌘↵", icon: appIcon(chrome), activate: { openURL(host) })
     }
 
     /// The rows shown while ⌘ is held: all actions that apply to `query`; empty if none does.
