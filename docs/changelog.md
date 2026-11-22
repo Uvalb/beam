@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-22: Release 0.2.0 (build 8): URL completion from previously opened URLs, Settings in General/Results/Support tabs, every signed-in Slack workspace, Hebrew keyboard layout matches English keys.
 - 2026-11-20: Slack with more than one workspace signed in: Beam listed only the workspace Slack saved last (usually the one you switch away from), because it stopped at the newest state blob. It now reads every blob and keeps the newest per workspace, so `@` and `#` search all of them (decision 0025).
 - 2026-11-13: URL completion: ⌘↵ remembers full URLs (with paths), not just hosts; remembered URLs that complete what you type show under the matches as you type, and Tab fills them in.
 - 2026-11-13: Settings split into General, Results and Support tabs. The ranking list shows rank numbers, drag handles and switches, and rows also move with right-click or ⌥↑/↓.
