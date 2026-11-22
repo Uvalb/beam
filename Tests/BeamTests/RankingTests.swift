@@ -124,6 +124,7 @@ struct RankingTests {
     @Test func hebrewKeyboardFindsEnglish() {
         let items = [item(.app, "Slack"), item(.app, "Safari"), item(.app, "לוח שנה")]
         #expect(titles(items, "דךשבל") == ["app:Slack"])
+        #expect(Matcher.englishFromHebrewKeys("\u{05F3}ישאדשפפ") == "whatsapp")
         #expect(titles(items, "לוח") == ["app:לוח שנה"])
         #expect(Matcher.englishFromHebrewKeys("slack") == nil)
     }
