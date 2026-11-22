@@ -31,6 +31,19 @@ enum Matcher {
             || (0x064B...0x065F).contains(u.value) || u.value == 0x0670
     }
 
+    /// Hebrew keyboard (macOS standard layout) letter -> the English letter on the same key.
+    private static let hebrewKeys: [Character: Character] = [
+        "/": "q", "'": "w", "\u{05F3}": "w", "ק": "e", "ר": "r", "א": "t", "ט": "y", "ו": "u", "ן": "i", "ם": "o", "פ": "p",
+        "ש": "a", "ד": "s", "ג": "d", "כ": "f", "ע": "g", "י": "h", "ח": "j", "ל": "k", "ך": "l", "ף": ";",
+        "ז": "z", "ס": "x", "ב": "c", "ה": "v", "נ": "b", "מ": "n", "צ": "m", "ת": ",", "ץ": ".", ",": "'", ".": "/", "[": "]", "]": "[",
+    ]
+
+    /// What the query would have been with the keyboard on English: "דךשבל" -> "slack". Nil when the query has no Hebrew letters.
+    static func englishFromHebrewKeys(_ query: String) -> String? {
+        guard query.unicodeScalars.contains(where: { (0x05D0...0x05EA).contains($0.value) }) else { return nil }
+        return String(query.map { hebrewKeys[$0] ?? $0 })
+    }
+
     static func score(_ query: String, in target: String) -> Int? {
         let q = normalize(query)
         let t = normalize(target)
