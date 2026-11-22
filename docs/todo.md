@@ -1,7 +1,8 @@
 # Todo
 
 ## Next
-- Chrome tab focus: watch the `chrome-focus` log for a few days after the window-id change (2026-11-14). Still open: one jump took 3 s because the window wasn't matched by title on this Space and fell through to the full element scan; a one-off AppleScript -600 with Chrome running, and whether the post-focus check ever shows Chrome key but not on top.
+- After the next release: `ensureOnTop` should ignore windows that don't overlap the target (2026-11-22, a 1512x47 Chrome strip on the other display counted as "on top" and caused 4 needless raises).
+- Chrome tab focus: watch the `chrome-focus` log for a few days after the window-id change (2026-11-14). Still open: one jump took 3 s because the window wasn't matched by title on this Space and fell through to the full element scan; a one-off AppleScript -600 with Chrome running, and whether the post-focus check ever shows Chrome key but not on top (it does: one extra AX raise fixes it, 2026-11-17..21). Check that jumps now log "matched by listed position" with short script times.
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.

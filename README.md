@@ -83,6 +83,28 @@ Beam enables launch-at-login on its own at first run. Uninstalling just removes 
 
 Keys: ↑/↓ to move, ↩ to go, Esc to dismiss.
 
+## Debug logging
+
+Beam always writes problems with Chrome tab jumps (AppleScript errors, a tab not found, a window that needed extra raising) to the macOS system log. Detail for every jump is off by default. To help debug a jump problem, turn it on:
+
+```bash
+defaults write com.beam.launcher chromeFocusVerbose -bool true
+```
+
+It applies from the next jump, with no restart, and stays on through updates and reinstalls until you turn it off:
+
+```bash
+defaults delete com.beam.launcher chromeFocusVerbose
+```
+
+To send the log, save the last hour to a file:
+
+```bash
+log show --last 1h --predicate 'subsystem == "com.beam.launcher"' > beam-log.txt
+```
+
+`log stream --level debug --predicate 'subsystem == "com.beam.launcher"'` shows most of the same detail live without the setting. The log holds tab and window IDs, window sizes and positions, and app bundle IDs; nothing leaves your Mac unless you send the file.
+
 ## Acknowledgements
 
 Beam uses [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) by Sindre Sorhus (MIT) and [Sparkle](https://sparkle-project.org) (MIT, with bundled third-party licenses) for updates. Full license text is in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt), which is also bundled in `Beam.app/Contents/Resources/` and opens from **Settings… → Acknowledgements…**.

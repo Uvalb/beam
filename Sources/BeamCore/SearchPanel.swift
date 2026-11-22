@@ -488,7 +488,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         // What started it, to trace focus attempts nobody meant to make (no query text logged).
         let ev = NSApp.currentEvent
         let key = ev.map { $0.type == .keyDown ? " key \($0.keyCode)" : " event \($0.type.rawValue)" } ?? ""
-        ChromeProvider.focusLog.debug("launch via \(trigger, privacy: .public)\(key, privacy: .public), \(String(describing: item.kind), privacy: .public) row \(row), panel visible \(self.panel.isVisible)")
+        ChromeProvider.trace("launch via \(trigger)\(key), \(item.kind) row \(row), panel visible \(panel.isVisible)")
         if let milestone = Support.recordBeam() {
             stamp(milestone, then: item)
         } else {
