@@ -11,6 +11,8 @@ enum Support {
     static let supportURL = URL(string: "https://beamlauncher.app/?from=app#support")!
 
     static let milestones = [100, 1_000, 5_000, 10_000, 25_000, 50_000, 100_000]
+    /// UserDefaults key for supporter status; Settings observes it with @AppStorage.
+    static let supporterKey = "supportIsSupporter"
     /// The pill stays for this many beams after a milestone (e.g. 100–105).
     static let pillBeams = 5
 
@@ -19,7 +21,7 @@ enum Support {
         static let lastMilestoneShown = "supportLastMilestoneShown"
         static let pillUntil = "supportPillUntil"
         static let pillMilestone = "supportPillMilestone"
-        static let supporter = "supportIsSupporter"
+        static let supporter = Support.supporterKey
         static let license = "supportLicense"
         static let beamKey = "supportBeamKey"
         static let lastCheck = "supportLicenseLastCheck"

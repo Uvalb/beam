@@ -214,7 +214,8 @@ struct ResultsSettingsView: View {
                 .frame(width: 16, alignment: .trailing)
             Image(systemName: "line.3.horizontal")
                 .foregroundStyle(.tertiary)
-                .onHover { inside in if inside { NSCursor.openHand.push() } else { NSCursor.pop() } }
+                // set, not push/pop: a row moved or removed under the pointer never gets its exit event.
+                .onHover { inside in (inside ? NSCursor.openHand : NSCursor.arrow).set() }
             Image(systemName: kind.settingsSymbol)
                 .frame(width: 18)
                 .foregroundStyle(on ? .secondary : .tertiary)
@@ -306,15 +307,17 @@ private struct MoveKeys: NSViewRepresentable {
 /// Support tab: supporter status, license, version and acknowledgements.
 struct SupportSettingsView: View {
     var onLicense: () -> Void = {}
+    /// Observed so activating a key in the license window updates this tab at once.
+    @AppStorage(Support.supporterKey) private var isSupporter = false
 
     var body: some View {
         Form {
             Section {
                 HStack {
                     Image(systemName: "heart").foregroundStyle(.pink)
-                    Text(Support.isSupporter ? "Thank you for supporting Beam" : "Beam is free, and nothing is locked.")
+                    Text(isSupporter ? "Thank you for supporting Beam" : "Beam is free, and nothing is locked.")
                     Spacer()
-                    if Support.isSupporter {
+                    if isSupporter {
                         Button("Manage License…") { onLicense() }
                     } else {
                         Button("Enter License Key…") { onLicense() }
