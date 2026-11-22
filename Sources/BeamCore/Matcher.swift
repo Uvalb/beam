@@ -35,7 +35,7 @@ enum Matcher {
     private static let hebrewKeys: [Character: Character] = [
         "/": "q", "'": "w", "\u{05F3}": "w", "ק": "e", "ר": "r", "א": "t", "ט": "y", "ו": "u", "ן": "i", "ם": "o", "פ": "p",
         "ש": "a", "ד": "s", "ג": "d", "כ": "f", "ע": "g", "י": "h", "ח": "j", "ל": "k", "ך": "l", "ף": ";",
-        "ז": "z", "ס": "x", "ב": "c", "ה": "v", "נ": "b", "מ": "n", "צ": "m", "ת": ",", "ץ": ".",
+        "ז": "z", "ס": "x", "ב": "c", "ה": "v", "נ": "b", "מ": "n", "צ": "m", "ת": ",", "ץ": ".", ",": "'", ".": "/", "[": "]", "]": "[",
     ]
 
     /// What the query would have been with the keyboard on English: "דךשבל" -> "slack". Nil when the query has no Hebrew letters.
