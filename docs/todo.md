@@ -4,6 +4,8 @@
 - After the next release: `ensureOnTop` should ignore windows that don't overlap the target (2026-11-22, a 1512x47 Chrome strip on the other display counted as "on top" and caused 4 needless raises).
 - Chrome tab focus: watch the `chrome-focus` log for a few days after the window-id change (2026-11-14). Still open: one jump took 3 s because the window wasn't matched by title on this Space and fell through to the full element scan; a one-off AppleScript -600 with Chrome running, and whether the post-focus check ever shows Chrome key but not on top (it does: one extra AX raise fixes it, 2026-11-17..21). Check that jumps now log "matched by listed position" with short script times.
 - Slack: support small workspaces whose state Chromium keeps inline in LevelDB (no blob file), using the existing Snappy decoder.
+- Slack: sign out of one of two workspaces by hand and check whether its blob stays and Beam still lists it (0025).
+- Slack: test `SlackProvider.currentEntries()` against a temp folder of encoded blobs (cache reuse, newest per workspace, dropping deleted files); needs a test helper that writes Slack-shaped blobs.
 - Claude Code sessions: check Return by hand on a few kinds of session (plain folder, worktree, "No folder") after each Claude desktop update; the store and `claude://` link are undocumented (0014).
 - Going live with payments: done in code (release builds reject test-mode keys, store ID 509476 checked). Before launch, switch the website checkout to live mode and validate one real key in a `make release` build.
 - Website (private repo): honour `?from=app` (don't start a download), and point the checkout thank-you page at `beam://license` so supporters land back in the app.
@@ -24,7 +26,7 @@
 9. Make the repo public on launch day, together with Show HN (launch plan is in the private business repo).
 
 ## Later or ideas
-- Check in the real app: closed saved groups (needs bookmarks bar shown) reopen and focus, and the Settings drag list reorders results.
+- Check in the real app: closed saved groups (needs bookmarks bar shown) reopen and focus, and the Settings drag list reorders results (now on the Results tab; also check ⌥↑/↓, right-click Move Up/Down, and that the window resizes between tabs).
 - Try the command-key actions by hand (⌘T, ⌘F, ⌘↵, Tab completion, ⌘ held list; 0020): the implementer could not drive the UI. Also check the terminal picker opens iTerm/Ghostty/etc. at the folder (only iTerm was installed when built; Kitty/Alacritty/WezTerm args untested). Possible follow-up: Tab completion for hosts.
 - Product direction (bookmarks, other browsers, System Settings panes, Cmd+Enter URLs, Cmd+T / Cmd+F for paths) lives in `roadmap.md`.
 - Non-English follow-ups, ranked, from the 2026-11-09 review: typing with a non-Latin keyboard layout (Hebrew, Russian) can't find English names; Beam's own UI isn't localizable yet; "Part of group" stripping in `WindowProvider` is English-only (affects other Chromium browsers); English-only hint keywords.

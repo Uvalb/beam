@@ -2,9 +2,15 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-22: Release 0.2.0 (build 8): URL completion from previously opened URLs, Settings in General/Results/Support tabs, every signed-in Slack workspace, Hebrew keyboard layout matches English keys.
+- 2026-11-22: README: Debug logging section (chromeFocusVerbose on/off, how to save and send the log).
+- 2026-11-21: Chrome tab jumps try the window and position from the tab list first (checked by tab id), so a window with many tabs no longer costs 1–3 s per jump; full search only if the tab moved.
+- 2026-11-20: Slack with more than one workspace signed in: Beam listed only the workspace Slack saved last (usually the one you switch away from), because it stopped at the newest state blob. It now reads every blob and keeps the newest per workspace, so `@` and `#` search all of them (decision 0025).
 - 2026-11-16: Jumping to a Chrome tab whose window isn't Chrome's front window brings it on top the first time: after switching to Chrome, Beam checks the window is really on top and raises it again if not (it used to become Chrome's key window behind another app's window). A local `chromeFocusVerbose` default stores every jump's detail in the `chrome-focus` log.
 - 2026-11-14: Chrome tab focus matches by tab id again: Chrome returns ids as text, and `"123" is 123` is false in AppleScript, so the id match never worked and every jump relied on the URL + title fallback, which fails whenever the title changed since the list loaded (Gmail's unread count). Focus and the tab list also walk windows by window id instead of position, so a tab is no longer reported missing when Chrome's windows reorder mid-script (Gmail failed this way several times a day). If a tab really is missing, focus goes back to the app that was in front instead of an invisible Beam. The `chrome-focus` log keeps failures (tab not found with window/tab counts, AppleScript errors, slow or missed window lookups); what started each jump and whether the target ended up on top are debug-level (`log stream --level debug`).
 - 2026-11-13: Chrome tab focus logs why a tab didn't come forward (`log stream --predicate 'subsystem == "com.beam.launcher"'`, category `chrome-focus`; no titles or URLs), remembers which accessibility element IDs were windows so finding a window on another Space stays fast after a long uptime, and no longer raises the wrong window when that search times out.
+- 2026-11-13: URL completion: ⌘↵ remembers full URLs (with paths), not just hosts; remembered URLs that complete what you type show under the matches as you type, and Tab fills them in.
+- 2026-11-13: Settings split into General, Results and Support tabs. The ranking list shows rank numbers, drag handles and switches, and rows also move with right-click or ⌥↑/↓.
 - 2026-11-12: License window wording: the key comes from the checkout thank-you page (Stripe receipts can't carry it), the field shows the `BEAM-` format, and the footer says the key is re-checked monthly with beamlauncher.app instead of "Lemon Squeezy once".
 - 2026-11-12: Release 0.1.6 (build 7): accepts BEAM- supporter keys from beamlauncher.app (Stripe checkout), re-checked monthly; receipts link to link.com.
 - 2026-11-12: Accepts `BEAM-` supporter keys from beamlauncher.app (Stripe checkout), re-checked about monthly so a refund revokes them; Lemon Squeezy keys still work. "Receipts and billing" opens link.com (0024).
@@ -78,5 +84,4 @@ Newest first. One line per merged change.
 - 2026-11-11: The App Store Slack's data is read only once you type "@" or "#", not at launch, so the "access data from other apps" prompt after each update shows up only when you search Slack; the last list is saved so results show right away (decision 0022).
 - 2026-11-11: Release 0.1.5 (build 6): Chrome tab focus raises the right window; Slack (App Store) data read only after @ or #; hidden main menu so Cmd-V etc. work, ⌘↵ runs the selected action row.
 - 2026-11-12: releasing.md: the feed is published by a beam-private PR (merge deploys), and tagging/GitHub release are step 7. Released 0.1.5 (build 6).
-- 2026-11-21: Chrome tab jumps try the window and position from the tab list first (checked by tab id), so a window with many tabs no longer costs 1–3 s per jump; full search only if the tab moved.
-- 2026-11-22: README: Debug logging section (chromeFocusVerbose on/off, how to save and send the log).
+- Search: a query typed with the keyboard left on Hebrew also matches the English letters on the same keys ("דךשבל" finds Slack).

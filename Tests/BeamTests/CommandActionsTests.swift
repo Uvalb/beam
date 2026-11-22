@@ -52,6 +52,20 @@ struct URLInputTests {
         #expect(URLInput.candidates("youtube.co.il", history: ["youtube.co.il"]) == ["youtube.co.il"])
     }
 
+    @Test func fullURLsFromHistory() {
+        let h = ["github.com/uvalb/beam/pulls", "www.github.com", "gitlab.com"]
+        #expect(URLInput.historyMatches("github.com/u", history: h) == ["github.com/uvalb/beam/pulls"])
+        #expect(URLInput.historyMatches("git", history: h) == h)
+        #expect(URLInput.historyMatches("gitlab.com", history: h).isEmpty)
+        #expect(URLInput.candidates("github.com/u", history: h) == ["github.com/uvalb/beam/pulls", "github.com/u"])
+        #expect(URLInput.candidates("gitlab.com", history: h) == ["gitlab.com"])
+    }
+
+    @Test func normalizes() {
+        #expect(URLInput.normalize(" https://GitHub.com/Uvalb/ ") == "github.com/Uvalb")
+        #expect(URLInput.normalize("Example.COM") == "example.com")
+    }
+
     @Test func rejectsNonHosts() {
         #expect(URLInput.candidates("two words", history: []).isEmpty)
         #expect(URLInput.candidates("", history: []).isEmpty)
