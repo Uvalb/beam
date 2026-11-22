@@ -3,6 +3,7 @@
 Newest first. One line per merged change.
 
 - 2026-11-20: Slack with more than one workspace signed in: Beam listed only the workspace Slack saved last (usually the one you switch away from), because it stopped at the newest state blob. It now reads every blob and keeps the newest per workspace, so `@` and `#` search all of them (decision 0025).
+- 2026-11-13: URL completion: ⌘↵ remembers full URLs (with paths), not just hosts; remembered URLs that complete what you type show under the matches as you type, and Tab fills them in.
 - 2026-11-13: Settings split into General, Results and Support tabs. The ranking list shows rank numbers, drag handles and switches, and rows also move with right-click or ⌥↑/↓.
 - 2026-11-12: License window wording: the key comes from the checkout thank-you page (Stripe receipts can't carry it), the field shows the `BEAM-` format, and the footer says the key is re-checked monthly with beamlauncher.app instead of "Lemon Squeezy once".
 - 2026-11-12: Release 0.1.6 (build 7): accepts BEAM- supporter keys from beamlauncher.app (Stripe checkout), re-checked monthly; receipts link to link.com.
