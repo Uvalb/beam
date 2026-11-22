@@ -120,4 +120,11 @@ struct RankingTests {
         #expect(SearchIndex.search(items, query: "@").map(\.title) == ["Dana", "Noa"])
         #expect(SearchIndex.search(items, query: "@", limit: 1).map(\.title) == ["Dana"])
     }
+
+    @Test func hebrewKeyboardFindsEnglish() {
+        let items = [item(.app, "Slack"), item(.app, "Safari"), item(.app, "לוח שנה")]
+        #expect(titles(items, "דךשבל") == ["app:Slack"])
+        #expect(titles(items, "לוח") == ["app:לוח שנה"])
+        #expect(Matcher.englishFromHebrewKeys("slack") == nil)
+    }
 }

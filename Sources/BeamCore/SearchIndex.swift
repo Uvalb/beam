@@ -251,11 +251,16 @@ final class SearchIndex {
         func precedence(_ k: ItemKind) -> Int { order.firstIndex(of: k) ?? order.count }
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return [] }
+        // Typed with the keyboard left on Hebrew: also try the English letters on the same keys.
+        let queries = [q] + (Matcher.englishFromHebrewKeys(q).map { [$0] } ?? [])
+        func best(_ keys: [String]) -> Int? {
+            queries.flatMap { q in keys.compactMap { Matcher.score(q, in: $0) } }.max()
+        }
         // (score, precedence, item); precedence order.count = matched only via a secondary key.
         var scored: [(Int, Int, SearchItem)] = []
         for item in items {
-            let primary = item.keys.compactMap { Matcher.score(q, in: $0) }.max().map { $0 + min(item.boost, Matcher.maxBoost) }
-            let secondary = item.secondaryKeys.compactMap { Matcher.score(q, in: $0) }.max()
+            let primary = best(item.keys).map { $0 + min(item.boost, Matcher.maxBoost) }
+            let secondary = best(item.secondaryKeys)
             if let p = primary, Matcher.isStrong(p) {
                 // Secondary key also matching (e.g. the URL) is a small tiebreak within the tier.
                 let bonus = secondary.map { Matcher.isStrong($0) } == true ? 100 : 0
