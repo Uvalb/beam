@@ -634,10 +634,7 @@ enum ChromeProvider {
         var focused: CFTypeRef?
         AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focused)
         let key = focused.map { SpaceWindows.windowID($0 as! AXUIElement) } ?? 0
-        let list = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
-        let top = list.first { ($0[kCGWindowLayer as String] as? Int) == 0 }
-        let topID = top?[kCGWindowNumber as String] as? CGWindowID ?? 0
-        let topPID = top?[kCGWindowOwnerPID as String] as? pid_t ?? 0
+        let (topID, topPID) = topWindow(over: target)
         let topOwner = topPID == chrome.processIdentifier ? "Chrome" : NSRunningApplication(processIdentifier: topPID)?.bundleIdentifier ?? "pid \(topPID)"
         return "frontmost \(front), Chrome key window \(key == target ? "is" : "is not") target (\(key) vs \(target)), top window \(topID == target ? "is target" : "is \(topOwner) \(topID)")"
     }
@@ -684,7 +681,7 @@ enum ChromeProvider {
         guard wid != 0, attempt <= 4 else { return }
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.12) {
             let front = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
-            let top = topWindow()
+            let top = topWindow(over: wid)
             if top.id == wid {
                 if attempt > 1 { focusLog.notice("\(tag, privacy: .public): on top after \(attempt - 1) extra raise(s)") }
                 return
@@ -697,9 +694,10 @@ enum ChromeProvider {
             AXUIElementPerformAction(window, kAXRaiseAction as CFString)
             AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
             // AXRaise alone didn't beat another Chrome window once (2026-11-16): from the second
-            // try, also have Chrome reorder its own windows.
+            // try, also have Chrome reorder its own windows. Only when one of Chrome's own windows
+            // is in the way: `set index` can't help against another app, and it flashes the tab.
             var how = "AX"
-            if attempt >= 2, let sid = scriptWindowID {
+            if attempt >= 2, top.pid == app.processIdentifier, let sid = scriptWindowID {
                 let (_, err) = AppleScript.runReporting("""
                 if application id "\(bundleID)" is running then
                     tell application id "\(bundleID)" to set index of window id \(sid) to 1
@@ -734,9 +732,21 @@ enum ChromeProvider {
     }
 
     /// The topmost normal (layer 0) on-screen window. No titles, so no Screen Recording needed.
-    static func topWindow() -> (id: CGWindowID, pid: pid_t) {
+    /// Only windows that cover part of `target` and are a real window's height count: a 1512x47
+    /// Chrome strip on the other display was "on top" for every jump (2026-11-22/23), so the
+    /// retries kept raising and the AppleScript `set index` made the tab flash and drop behind.
+    static func topWindow(over target: CGWindowID) -> (id: CGWindowID, pid: pid_t) {
         let list = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
-        let top = list.first { ($0[kCGWindowLayer as String] as? Int) == 0 }
+        func bounds(_ w: [String: Any]) -> CGRect? {
+            (w[kCGWindowBounds as String] as? NSDictionary).flatMap { CGRect(dictionaryRepresentation: $0) }
+        }
+        let normal = list.filter { ($0[kCGWindowLayer as String] as? Int) == 0 }
+        let targetRect = normal.first { ($0[kCGWindowNumber as String] as? CGWindowID) == target }.flatMap(bounds)
+        let top = normal.first { w in
+            if (w[kCGWindowNumber as String] as? CGWindowID) == target { return true }
+            guard let r = bounds(w), r.height >= 100 else { return false }
+            return targetRect.map { r.intersects($0) } ?? true
+        }
         return (top?[kCGWindowNumber as String] as? CGWindowID ?? 0, top?[kCGWindowOwnerPID as String] as? pid_t ?? 0)
     }
 

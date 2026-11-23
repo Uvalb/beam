@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-23: The "is the tab's window on top" check only counts windows that overlap it and are at least 100 pt tall: a thin Chrome strip on another display counted as covering it, so every jump re-raised four times and the AppleScript raise made WhatsApp flash and drop behind. The AppleScript raise now runs only when another Chrome window is in the way.
 - 2026-11-22: Release 0.2.0 (build 8): URL completion from previously opened URLs, Settings in General/Results/Support tabs, every signed-in Slack workspace, Hebrew keyboard layout matches English keys.
 - 2026-11-22: README: Debug logging section (chromeFocusVerbose on/off, how to save and send the log).
 - 2026-11-21: Chrome tab jumps try the window and position from the tab list first (checked by tab id), so a window with many tabs no longer costs 1–3 s per jump; full search only if the tab moved.
