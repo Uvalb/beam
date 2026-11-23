@@ -43,28 +43,60 @@ enum SpaceWindows {
         return current + others.filter { let id = windowID($0); return id == 0 || unique.insert(id).inserted }
     }
 
+    /// How the last `allWindows` call went, for the focus log.
+    struct Scan { var found = 0, fromCache = 0; var lastID: UInt64 = 0; var elapsed: TimeInterval = 0; var timedOut = false }
+
+    /// Element IDs that were windows, per pid. IDs only grow over an app's life (and with every
+    /// element Beam asks about, e.g. the tab-group walk), so after a long uptime a scan from 0
+    /// can run out of time before reaching the windows. Known IDs are tried first.
+    private static var known: [pid_t: Set<UInt64>] = [:]
+    private static let lock = NSLock()
+
     /// Every standard window of `pid`, on any Space. Element IDs are small integers, so
-    /// try them in order until the time budget runs out, or `until` accepts a window.
+    /// try the ones that were windows before, then the rest in order, until the time budget
+    /// runs out or `until` accepts a window.
     /// Apps with many windows (Chrome) can need IDs far past 1000 and well over 0.1s.
     static func allWindows(pid: pid_t, budget: TimeInterval = 0.1, maxID: UInt64 = 1000,
-                           until: ((AXUIElement) -> Bool)? = nil) -> [AXUIElement] {
+                           until: ((AXUIElement) -> Bool)? = nil, scan: UnsafeMutablePointer<Scan>? = nil) -> [AXUIElement] {
         var token = Data(count: 20)
         token.withUnsafeMutableBytes { p in
             p.storeBytes(of: pid, toByteOffset: 0, as: Int32.self)
             p.storeBytes(of: Int32(0), toByteOffset: 4, as: Int32.self)
             p.storeBytes(of: Int32(0x636f636f), toByteOffset: 8, as: Int32.self) // "coco"
         }
-        let deadline = Date().addingTimeInterval(budget)
+        let start = Date()
+        let deadline = start.addingTimeInterval(budget)
+        var stats = Scan()
+        defer { stats.elapsed = Date().timeIntervalSince(start); scan?.pointee = stats }
+        lock.lock(); let cached = (known[pid] ?? []).sorted(); lock.unlock()
         var result: [AXUIElement] = []
-        for elementID: UInt64 in 0..<maxID {
-            if Date() > deadline { break }
+        var hits = Set<UInt64>(), misses = Set<UInt64>()
+        defer {
+            lock.lock()
+            known[pid, default: []].subtract(misses)
+            known[pid, default: []].formUnion(hits)
+            lock.unlock()
+        }
+        func probe(_ elementID: UInt64) -> AXUIElement? {
             token.withUnsafeMutableBytes { $0.storeBytes(of: elementID, toByteOffset: 12, as: UInt64.self) }
-            guard let el = _AXUIElementCreateWithRemoteToken(token as CFData)?.takeRetainedValue() else { continue }
+            guard let el = _AXUIElementCreateWithRemoteToken(token as CFData)?.takeRetainedValue() else { return nil }
             AXUIElementSetMessagingTimeout(el, 0.05)
             var sub: CFTypeRef?
             guard AXUIElementCopyAttributeValue(el, kAXSubroleAttribute as CFString, &sub) == .success,
-                  let s = sub as? String, s == kAXStandardWindowSubrole || s == kAXDialogSubrole else { continue }
-            result.append(el)
+                  let s = sub as? String, s == kAXStandardWindowSubrole || s == kAXDialogSubrole else { return nil }
+            return el
+        }
+        for elementID in cached {
+            guard let el = probe(elementID) else { misses.insert(elementID); continue }
+            hits.insert(elementID); result.append(el); stats.found += 1; stats.fromCache += 1
+            if until?(el) == true { return result }
+        }
+        let skip = Set(cached)
+        for elementID: UInt64 in 0..<maxID where !skip.contains(elementID) {
+            if Date() > deadline { stats.timedOut = true; break }
+            stats.lastID = elementID
+            guard let el = probe(elementID) else { continue }
+            hits.insert(elementID); result.append(el); stats.found += 1
             if until?(el) == true { break }
         }
         return result

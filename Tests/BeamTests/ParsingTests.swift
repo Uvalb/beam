@@ -30,15 +30,16 @@ struct ChromeParsingTests {
 
     @Test func rows() {
         let s = ChromeProvider.sep, r = ChromeProvider.rowSep
-        let out = "11\(s)Inbox\(s)https://mail.com\(r)"
-            + "12\(s)\(s)https://blank.com\(r)"
-            + "x\(s)Bad\(s)u\(r)"              // non-numeric tab id
-            + "13\(s)Short\(r)"                // too few fields
-            + "14\(s)Last\(s)https://z.com"    // no trailing separator
+        let out = "11\(s)303\(s)1\(s)Inbox\(s)https://mail.com\(r)"
+            + "12\(s)303\(s)2\(s)\(s)https://blank.com\(r)"
+            + "x\(s)303\(s)3\(s)Bad\(s)u\(r)"          // non-numeric tab id
+            + "15\(s)w\(s)1\(s)Bad\(s)u\(r)"           // non-numeric window id
+            + "13\(s)303\(s)4\(s)Short\(r)"            // too few fields
+            + "14\(s)7\(s)1\(s)Last\(s)https://z.com"  // no trailing separator
         #expect(ChromeProvider.parseRows(out) == [
-            .init(id: 11, title: "Inbox", url: "https://mail.com"),
-            .init(id: 12, title: "", url: "https://blank.com"),
-            .init(id: 14, title: "Last", url: "https://z.com"),
+            .init(id: 11, window: 303, index: 1, title: "Inbox", url: "https://mail.com"),
+            .init(id: 12, window: 303, index: 2, title: "", url: "https://blank.com"),
+            .init(id: 14, window: 7, index: 1, title: "Last", url: "https://z.com"),
         ])
         #expect(ChromeProvider.parseRows("").isEmpty)
     }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import AppKit
+import os
 
 enum ItemKind: Int, CaseIterable {
     case app = 0, window = 1, tab = 2, tabGroup = 3, claudeSession = 4, slack = 5, closedGroup = 6
@@ -430,9 +431,15 @@ enum ChromeProvider {
         set out to ""
         if application id "\(bundleID)" is running then
             tell application id "\(bundleID)"
-                repeat with w in windows
-                    repeat with t in tabs of w
-                        set out to out & (id of t) & "\(sep)" & (title of t) & "\(sep)" & (URL of t) & "\(rowSep)"
+                -- By window id: "repeat with w in windows" names windows by position, and
+                -- they reorder whenever Chrome's front window changes mid-loop.
+                set wids to id of windows
+                repeat with k from 1 to count of wids
+                    set wid to item k of wids
+                    set n to 0
+                    repeat with t in tabs of window id wid
+                        set n to n + 1
+                        set out to out & (id of t) & "\(sep)" & wid & "\(sep)" & n & "\(sep)" & (title of t) & "\(sep)" & (URL of t) & "\(rowSep)"
                     end repeat
                 end repeat
             end tell
@@ -441,6 +448,7 @@ enum ChromeProvider {
         """
         let (desc, error) = AppleScript.runReporting(script)
         if error == AppleScript.notPermitted { return [automationHint] }
+        if let error { focusLog.error("tab list: AppleScript error \(error)") }
         guard let result = desc?.stringValue else { return [] }
         let icon = chrome.icon
         let rows = parseRows(result)
@@ -450,19 +458,20 @@ enum ChromeProvider {
                 kind: .tab, title: r.title.isEmpty ? r.url : r.title, subtitle: r.url,
                 keys: [stripBadge(r.title.isEmpty ? r.url : r.title)], secondaryKeys: [urlKey(r.url)],
                 id: "tab|\(r.id)", icon: favicons[r.url] ?? icon,
-                activate: { focus(tabID: r.id, url: r.url, title: r.title) })
+                activate: { focus(tabID: r.id, url: r.url, title: r.title, window: r.window, index: r.index) })
         }
     }
 
     /// `title` is Chrome's own (possibly empty: the item shows the URL then, but focus matches the real title).
-    struct TabRow: Equatable { let id: Int, title: String, url: String }
+    /// `window` and `index` are where the tab was when listed: a hint for focus, checked before use.
+    struct TabRow: Equatable { let id: Int, window: Int, index: Int, title: String, url: String }
 
     /// Splits the script's output into tabs, skipping malformed rows.
     static func parseRows(_ output: String) -> [TabRow] {
         output.components(separatedBy: rowSep).compactMap { row in
             let f = row.components(separatedBy: sep)
-            guard f.count == 3, let id = Int(f[0]) else { return nil }
-            return TabRow(id: id, title: f[1], url: f[2])
+            guard f.count == 5, let id = Int(f[0]), let w = Int(f[1]), let i = Int(f[2]) else { return nil }
+            return TabRow(id: id, window: w, index: i, title: f[3], url: f[4])
         }
     }
 
@@ -488,19 +497,42 @@ enum ChromeProvider {
     /// it brings its old main window back on top, so the target flashes and disappears.
     /// Finds the tab by id; failing that (Chrome restarted, so ids changed) by URL and title.
     /// If the tab is gone, does nothing rather than open some other tab.
-    private static func focus(tabID: Int, url: String, title: String) {
+    private static func focus(tabID: Int, url: String, title: String, window: Int, index: Int) {
         guard let chrome = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first else { return }
         let script = """
         if application id "\(bundleID)" is running then
             tell application id "\(bundleID)"
-                -- By id first, in every window; only then by URL and title.
+                -- Fast path: the window and position from the tab list, if the tab is still there.
+                -- Reading every tab id of a window with many tabs takes Chrome 1-3 s.
+                set found to 0
+                try
+                    set w to window id \(window)
+                    if ((id of tab \(index) of w) as text) is "\(tabID)" then set found to \(index)
+                end try
+                if found is not 0 then
+                    set wasIndex to index of w
+                    set wasActive to (active tab index of w is found)
+                    set active tab index of w to found
+                    set t to title of active tab of w
+                    set ld to loading of active tab of w
+                    set index of w to 1
+                    return "ok0" & "\(sep)" & wasIndex & "\(sep)" & wasActive & "\(sep)" & ld & "\(sep)" & (id of w) & "\(sep)" & t
+                end if
+                -- Windows by id, never by position: "repeat with w in windows" names "window k",
+                -- and the order changes whenever Chrome's front window does (Beam's panel closing
+                -- can do that mid-loop), which skipped the window holding the tab.
+                set wids to id of windows
+                set nTabs to 0
+                -- By tab id first, in every window; only then by URL and title.
                 repeat with pass from 1 to 2
-                    repeat with w in windows
+                    repeat with k from 1 to count of wids
+                        set w to window id (item k of wids)
                         set found to 0
                         if pass is 1 then
                             set ids to id of tabs of w
+                            set nTabs to nTabs + (count of ids)
                             repeat with i from 1 to count of ids
-                                if item i of ids is \(tabID) then
+                                if (item i of ids as text) is "\(tabID)" then
                                     set found to i
                                     exit repeat
                                 end if
@@ -516,49 +548,213 @@ enum ChromeProvider {
                             end repeat
                         end if
                         if found is not 0 then
+                            set wasIndex to index of w
+                            set wasActive to (active tab index of w is found)
                             set active tab index of w to found
-                            -- Read the title before reordering: `w` is "window k", which is
-                            -- a different window once this one moves to the front.
                             set t to title of active tab of w
+                            set ld to loading of active tab of w
                             set index of w to 1
-                            return "ok" & t
+                            return "ok" & pass & "\(sep)" & wasIndex & "\(sep)" & wasActive & "\(sep)" & ld & "\(sep)" & (id of w) & "\(sep)" & t
                         end if
                     end repeat
                 end repeat
+                return "none" & (count of wids) & "\(sep)" & nTabs
             end tell
         end if
         return ""
         """
         DispatchQueue.global(qos: .userInteractive).async {
-            let result = AppleScript.run(script)?.stringValue ?? ""
-            guard result.hasPrefix("ok") else { return }   // tab is gone
-            let title = String(result.dropFirst(2))
-            guard let win = axWindow(of: chrome, title: title) else {
+            let started = Date()
+            let (desc, error) = AppleScript.runReporting(script)
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            let result = desc?.stringValue ?? ""
+            guard result.hasPrefix("ok") else {
+                if let error {
+                    focusLog.error("tab \(tabID): AppleScript error \(error) after \(ms) ms")
+                } else if result.hasPrefix("none") {
+                    let n = result.dropFirst(4).components(separatedBy: sep)
+                    focusLog.notice("tab \(tabID): not found in \(n.first ?? "?", privacy: .public) windows, \(n.last ?? "?", privacy: .public) tabs, after \(ms) ms")
+                } else {
+                    focusLog.error("tab \(tabID): script returned \(desc == nil ? "nothing" : "an unexpected result", privacy: .public), no error, after \(ms) ms")
+                }
+                returnToPreviousApp()
+                return
+            }
+            // pass, window index before, tab already active, loading, Chrome's window id, title (last: may contain anything)
+            let f = String(result.dropFirst(2)).components(separatedBy: sep)
+            let title = f.count >= 6 ? f[5...].joined(separator: sep) : ""
+            let (win, how) = axWindow(of: chrome, title: title)
+            let matched = f.first == "0" ? "listed position" : f.first == "1" ? "id" : "URL and title"
+            let scriptWindowID = f.count >= 6 ? Int(f[4]) : nil
+            if f.count >= 6 {
+                trace("tab \(tabID): window was #\(f[1]) in Chrome's order, tab already active \(f[2]), loading after select \(f[3])")
+            }
+            // Problems are kept in the log; the routine success line only while debug is on.
+            let troubled = win == nil || !how.hasPrefix("on this Space")
+            if troubled || verbose {
+                focusLog.notice("tab \(tabID): matched by \(matched, privacy: .public), script \(ms) ms, window \(how, privacy: .public)")
+            } else {
+                focusLog.debug("tab \(tabID): matched by \(matched, privacy: .public), script \(ms) ms, window \(how, privacy: .public)")
+            }
+            guard let win else {
                 DispatchQueue.main.async { chrome.activate() }
                 return
             }
-            bringForward(win, of: chrome)
+            let target = SpaceWindows.windowID(win)
+            bringForward(win, of: chrome, tag: "tab \(tabID)", scriptWindowID: scriptWindowID)
+            // Costs an AX call and a window list, so only when the jump looked shaky or
+            // someone is watching (`log stream --level debug`).
+            guard troubled || verbose || focusDebug.isEnabled(type: .debug) else { return }
+            for delay in [0.5, 2.0] {
+                DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                    focusLog.notice("tab \(tabID): after \(delay) s \(focusState(chrome: chrome, target: target), privacy: .public)")
+                }
+            }
         }
+    }
+
+    /// The app that was frontmost before Beam's panel opened, set by `SearchPanel.show`.
+    static var appBeforePanel: NSRunningApplication?
+
+    /// The tab isn't there, so nothing will activate Chrome: give focus back rather than leave
+    /// Beam active with no window, where the next keystroke goes nowhere visible.
+    private static func returnToPreviousApp() {
+        DispatchQueue.main.async {
+            guard NSApp.isActive, NSApp.windows.allSatisfy({ !$0.isVisible || !$0.canBecomeKey }) else { return }
+            appBeforePanel?.activate()
+        }
+    }
+
+    /// Frontmost app, whether Chrome's key (focused) window is the target, and whether the
+    /// target is the topmost normal window on screen. Window ids only, never titles.
+    private static func focusState(chrome: NSRunningApplication, target: CGWindowID) -> String {
+        let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none"
+        let axApp = AXUIElementCreateApplication(chrome.processIdentifier)
+        AXUIElementSetMessagingTimeout(axApp, 0.25)
+        var focused: CFTypeRef?
+        AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &focused)
+        let key = focused.map { SpaceWindows.windowID($0 as! AXUIElement) } ?? 0
+        let (topID, topPID) = topWindow(over: target)
+        let topOwner = topPID == chrome.processIdentifier ? "Chrome" : NSRunningApplication(processIdentifier: topPID)?.bundleIdentifier ?? "pid \(topPID)"
+        return "frontmost \(front), Chrome key window \(key == target ? "is" : "is not") target (\(key) vs \(target)), top window \(topID == target ? "is target" : "is \(topOwner) \(topID)")"
+    }
+
+    /// `log stream --predicate 'subsystem == "com.beam.launcher"'`: why a tab didn't come forward.
+    /// Failures are kept (notice/error); per-jump detail is debug, seen only with `--level debug`.
+    /// Never logs titles or URLs.
+    static let focusLog = Logger(subsystem: "com.beam.launcher", category: "chrome-focus")
+    private static let focusDebug = OSLog(subsystem: "com.beam.launcher", category: "chrome-focus")
+    /// `defaults write com.beam.launcher chromeFocusVerbose -bool true`: store the per-jump
+    /// detail (normally debug-only) so it can be read back later with `log show`. For chasing bugs.
+    static var verbose: Bool { UserDefaults.standard.bool(forKey: "chromeFocusVerbose") }
+    /// Per-jump detail: kept when `verbose`, else debug (seen only by `log stream --level debug`).
+    static func trace(_ message: String) {
+        if verbose { focusLog.notice("\(message, privacy: .public)") } else { focusLog.debug("\(message, privacy: .public)") }
     }
 
     /// Makes `window` Chrome's main window and brings it forward, in that order (see gotchas):
     /// unminimize, raise, set AXMain, then switch to its Space (SkyLight) or else activate Chrome.
     /// Shared by tabs and tab groups. Safe off the main thread.
-    static func bringForward(_ window: AXUIElement, of app: NSRunningApplication) {
-        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+    /// `scriptWindowID`: the window's id in Chrome's AppleScript, for the retry in `ensureOnTop`.
+    static func bringForward(_ window: AXUIElement, of app: NSRunningApplication, tag: String = "group",
+                             scriptWindowID: Int? = nil) {
+        let unmin = AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        let raise = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        let main = AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
         // SkyLight switches to the window's Space; activate() alone stays on this one.
-        if !SpaceWindows.focus(pid: app.processIdentifier, windowID: SpaceWindows.windowID(window)) {
+        let wid = SpaceWindows.windowID(window)
+        let sky = SpaceWindows.focus(pid: app.processIdentifier, windowID: wid)
+        if !sky {
             if Thread.isMainThread { app.activate() } else { DispatchQueue.main.async { app.activate() } }
         }
+        trace("\(tag): bring forward window \(wid): unminimize \(unmin.rawValue), raise \(raise.rawValue), main \(main.rawValue), SkyLight \(sky ? "ok" : "failed, activated instead"), main thread \(Thread.isMainThread), Beam active \(NSApp.isActive)")
+        ensureOnTop(window, wid: wid, of: app, tag: tag, scriptWindowID: scriptWindowID)
+    }
+
+    /// Raising a window of an app that isn't active only reorders it among that app's own windows,
+    /// and switching to the app afterwards doesn't reorder anything: the window became Chrome's key
+    /// window yet stayed behind another app's (2026-11-16, every call reported success). Only
+    /// Chrome's front window came up, so jumps worked "the second time". Once Chrome is active,
+    /// check the window really is on top and raise it again if not.
+    private static func ensureOnTop(_ window: AXUIElement, wid: CGWindowID, of app: NSRunningApplication, tag: String,
+                                    scriptWindowID: Int? = nil, attempt: Int = 1) {
+        guard wid != 0, attempt <= 4 else { return }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.12) {
+            let front = NSWorkspace.shared.frontmostApplication?.processIdentifier == app.processIdentifier
+            let top = topWindow(over: wid)
+            if top.id == wid {
+                if attempt > 1 { focusLog.notice("\(tag, privacy: .public): on top after \(attempt - 1) extra raise(s)") }
+                return
+            }
+            guard front else {
+                // Chrome isn't active yet; wait for it rather than raise behind its back.
+                ensureOnTop(window, wid: wid, of: app, tag: tag, scriptWindowID: scriptWindowID, attempt: attempt + 1)
+                return
+            }
+            AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+            // AXRaise alone didn't beat another Chrome window once (2026-11-16): from the second
+            // try, also have Chrome reorder its own windows. Only when one of Chrome's own windows
+            // is in the way: `set index` can't help against another app, and it flashes the tab.
+            var how = "AX"
+            if attempt >= 2, top.pid == app.processIdentifier, let sid = scriptWindowID {
+                let (_, err) = AppleScript.runReporting("""
+                if application id "\(bundleID)" is running then
+                    tell application id "\(bundleID)" to set index of window id \(sid) to 1
+                end if
+                """)
+                how = err.map { "AX + AppleScript (error \($0))" } ?? "AX + AppleScript"
+            }
+            focusLog.notice("\(tag, privacy: .public): window \(wid) not on top (top is \(describeWindow(top.id, pid: top.pid, app: app), privacy: .public)), raised again by \(how, privacy: .public), attempt \(attempt)")
+            ensureOnTop(window, wid: wid, of: app, tag: tag, scriptWindowID: scriptWindowID, attempt: attempt + 1)
+        }
+    }
+
+    /// What the window in the way is, without its title: owner, bounds, alpha, and for the
+    /// target app's own windows whether AX lists it and its subrole (popup, PiP, app window…).
+    static func describeWindow(_ id: CGWindowID, pid: pid_t, app: NSRunningApplication) -> String {
+        let info = (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first ?? [:]
+        let b = info[kCGWindowBounds as String] as? [String: Any] ?? [:]
+        let size = "\(b["Width"] ?? "?")x\(b["Height"] ?? "?") at \(b["X"] ?? "?"),\(b["Y"] ?? "?")"
+        let alpha = info[kCGWindowAlpha as String] ?? "?"
+        guard pid == app.processIdentifier else {
+            let owner = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "pid \(pid)"
+            return "\(owner) window \(id), \(size), alpha \(alpha)"
+        }
+        let axApp = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(axApp, 0.25)
+        var value: CFTypeRef?
+        AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value)
+        let ax = ((value as? [AXUIElement]) ?? []).first { SpaceWindows.windowID($0) == id }
+        var sub: CFTypeRef?
+        if let ax { AXUIElementCopyAttributeValue(ax, kAXSubroleAttribute as CFString, &sub) }
+        return "own window \(id), \(size), alpha \(alpha), \(ax == nil ? "not in AX window list" : "AX subrole \(sub as? String ?? "none")")"
+    }
+
+    /// The topmost normal (layer 0) on-screen window. No titles, so no Screen Recording needed.
+    /// Only windows that cover part of `target` and are a real window's height count: a 1512x47
+    /// Chrome strip on the other display was "on top" for every jump (2026-11-22/23), so the
+    /// retries kept raising and the AppleScript `set index` made the tab flash and drop behind.
+    static func topWindow(over target: CGWindowID) -> (id: CGWindowID, pid: pid_t) {
+        let list = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
+        func bounds(_ w: [String: Any]) -> CGRect? {
+            (w[kCGWindowBounds as String] as? NSDictionary).flatMap { CGRect(dictionaryRepresentation: $0) }
+        }
+        let normal = list.filter { ($0[kCGWindowLayer as String] as? Int) == 0 }
+        let targetRect = normal.first { ($0[kCGWindowNumber as String] as? CGWindowID) == target }.flatMap(bounds)
+        let top = normal.first { w in
+            if (w[kCGWindowNumber as String] as? CGWindowID) == target { return true }
+            guard let r = bounds(w), r.height >= 100 else { return false }
+            return targetRect.map { r.intersects($0) } ?? true
+        }
+        return (top?[kCGWindowNumber as String] as? CGWindowID ?? 0, top?[kCGWindowOwnerPID as String] as? pid_t ?? 0)
     }
 
     /// The window just moved to the front: AX lists windows front to back, so take the first
     /// whose title starts with the active tab's title, or else simply the frontmost.
     /// Windows on other Spaces come after the current Space's, via SpaceWindows.
-    private static func axWindow(of chrome: NSRunningApplication, title: String) -> AXUIElement? {
-        guard AXIsProcessTrusted() else { return nil }
+    private static func axWindow(of chrome: NSRunningApplication, title: String) -> (AXUIElement?, String) {
+        guard AXIsProcessTrusted() else { return (nil, "no Accessibility permission") }
         func matches(_ win: AXUIElement) -> Bool {
             var t: CFTypeRef?
             AXUIElementCopyAttributeValue(win, kAXTitleAttribute as CFString, &t)
@@ -569,10 +765,16 @@ enum ChromeProvider {
         var value: CFTypeRef?
         AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value)
         let current = (value as? [AXUIElement]) ?? []
-        if let win = current.first(where: matches) { return win }
+        if let win = current.first(where: matches) { return (win, "on this Space") }
         // Not on this Space: search all of Chrome's elements, which with many windows takes a while.
-        let other = SpaceWindows.allWindows(pid: chrome.processIdentifier, budget: 3, maxID: 1_000_000, until: matches)
-        return other.last.flatMap { matches($0) ? $0 : nil } ?? current.first
+        var scan = SpaceWindows.Scan()
+        let other = SpaceWindows.allWindows(pid: chrome.processIdentifier, budget: 3, maxID: 1_000_000, until: matches, scan: &scan)
+        let detail = "\(scan.found) windows (\(scan.fromCache) cached), scanned to id \(scan.lastID) in \(Int(scan.elapsed * 1000)) ms\(scan.timedOut ? ", timed out" : "")"
+        if let win = other.last, matches(win) { return (win, "on another Space; " + detail) }
+        // A full scan that missed means the window is here with a changed title, so the front
+        // one is right. After a timeout it may be on another Space: don't raise the wrong one.
+        if !scan.timedOut, let first = current.first { return (first, "front window (no title match); " + detail) }
+        return (nil, "not found; " + detail)
     }
 }
 
