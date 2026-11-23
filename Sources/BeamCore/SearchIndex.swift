@@ -732,7 +732,7 @@ enum ChromeProvider {
     }
 
     /// The topmost normal (layer 0) on-screen window. No titles, so no Screen Recording needed.
-    /// Only windows that cover part of `target` and are a real window's height count: a 1512x47
+    /// Only windows that cover part of `target` and are a real window's height count (and, if Chrome's own, are in its AX window list): a 1512x47
     /// Chrome strip on the other display was "on top" for every jump (2026-11-22/23), so the
     /// retries kept raising and the AppleScript `set index` made the tab flash and drop behind.
     static func topWindow(over target: CGWindowID) -> (id: CGWindowID, pid: pid_t) {
@@ -741,11 +741,36 @@ enum ChromeProvider {
             (w[kCGWindowBounds as String] as? NSDictionary).flatMap { CGRect(dictionaryRepresentation: $0) }
         }
         let normal = list.filter { ($0[kCGWindowLayer as String] as? Int) == 0 }
-        let targetRect = normal.first { ($0[kCGWindowNumber as String] as? CGWindowID) == target }.flatMap(bounds)
+        let targetWindow = normal.first { ($0[kCGWindowNumber as String] as? CGWindowID) == target }
+        let targetRect = targetWindow.flatMap(bounds)
+        let targetPID = targetWindow?[kCGWindowOwnerPID as String] as? pid_t
+        // Chrome's own popups, bubbles and infobars are CG windows missing from its AX window list
+        // (a 1512x115 one caused 4 needless raises, 2026-11-23): count a Chrome-owned candidate
+        // only if AX lists it. Fetched once, lazily. If the lookup fails, times out or is empty,
+        // count the window as before: a failed lookup must never hide a real covering window.
+        var axIDs: Set<CGWindowID>?
+        var axFetched = false
+        func listedInAX(_ id: CGWindowID, pid: pid_t) -> Bool {
+            if !axFetched {
+                axFetched = true
+                let axApp = AXUIElementCreateApplication(pid)
+                AXUIElementSetMessagingTimeout(axApp, 0.25)
+                var value: CFTypeRef?
+                let err = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value)
+                let ids = ((value as? [AXUIElement]) ?? []).map { SpaceWindows.windowID($0) }
+                if err == .success, !ids.isEmpty { axIDs = Set(ids) }
+            }
+            return axIDs?.contains(id) ?? true
+        }
         let top = normal.first { w in
-            if (w[kCGWindowNumber as String] as? CGWindowID) == target { return true }
+            guard let id = w[kCGWindowNumber as String] as? CGWindowID else { return false }
+            if id == target { return true }
             guard let r = bounds(w), r.height >= 100 else { return false }
-            return targetRect.map { r.intersects($0) } ?? true
+            if let targetRect, !r.intersects(targetRect) { return false }
+            if let targetPID, (w[kCGWindowOwnerPID as String] as? pid_t) == targetPID {
+                return listedInAX(id, pid: targetPID)
+            }
+            return true
         }
         return (top?[kCGWindowNumber as String] as? CGWindowID ?? 0, top?[kCGWindowOwnerPID as String] as? pid_t ?? 0)
     }
