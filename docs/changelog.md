@@ -2,6 +2,7 @@
 
 Newest first. One line per merged change.
 
+- 2026-11-23: The "on top" check ignores Chrome-owned windows missing from Chrome's AX window list (address-bar popups, bubbles, infobars): a 1512x115 one still caused 4 needless raises. If the AX lookup fails, times out or is empty, the window counts as before.
 - 2026-11-23: The "is the tab's window on top" check only counts windows that overlap it and are at least 100 pt tall: a thin Chrome strip on another display counted as covering it, so every jump re-raised four times and the AppleScript raise made WhatsApp flash and drop behind. The AppleScript raise now runs only when another Chrome window is in the way.
 - 2026-11-22: Release 0.2.0 (build 8): URL completion from previously opened URLs, Settings in General/Results/Support tabs, every signed-in Slack workspace, Hebrew keyboard layout matches English keys.
 - 2026-11-22: README: Debug logging section (chromeFocusVerbose on/off, how to save and send the log).
